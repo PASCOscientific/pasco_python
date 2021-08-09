@@ -13,17 +13,43 @@ Copy the library or at the minimum, the `pasco_ble.py` and `datasheets.xml` file
 
 Import the `PASCOBLEDevice` object from the pasco_ble file into your project file.
 
+## Connecting to a sensor ##
+
+### Available Commands ###
+`device = PASCOBLEDevice()` Create bluetooth sensor object  
+`device.scan()` Scan for available bluetooth devices. Returns a list of available devices  
+`device.connect()` Connect to a device using the name returned from the scan command.  
+`device.potential_values()` Get a list of available variable names for the sensor  
+`device.value_of()` Get a single measurement value  
+
 ### 1) Initiate an object for the sensor ###
+
 `my_sensor = PASCOBLEDevice()`
 
+
 ### 2) Scan for available bluetooth (BLE) sensors ###
+
 `my_sensor.scan()  # Returns list of BLE devices found in the scan.`
+`my_sensor.scan('Temperature') # Returns a list of Temperature sensors found`
 
-### 3) Connect to a sensor found from the scan ###
-Connect to a BLE device found from the scan:  
-`my_sensor.connect(ble_device)`
+How to use:  
+`found_devices = my_sensor.scan()`
 
-### Example of how to scan/connect ###
+
+### 3) Connect to a BLE sensor found from the scan ###
+
+Print a list of found devices (or use another option to browse the list)
+```
+for i, ble_device in enumerate(found_devices):
+    display_name = ble_device.name.split('>')
+    print(f'{i}: {display_name[0]}')
+```
+Connect to one of the devices:   
+`my_sensor.connect(found_devices[0])`
+
+
+### Full example of how to scan/connect ###
+
 ```
 my_sensor = PASCOBLEDevice()
 found_devices = my_sensor.scan()
@@ -39,6 +65,9 @@ ble_device = found_devices[int(selected_device)]
 
 my_sensor.connect(ble_device)
 ```
+
+
+### Reading sensor measurement values ###
 
 If a sensor only has one measurement, like the Wireless Temperature Sensor, we will see:
 ```
@@ -59,14 +88,16 @@ Enter [default: a]:
 
 The down side of selecting all is that it will be a greater burden on the battery.
 
+
 ### Connect to a sensor programatically ###
+
 There are a few ways to quickly connect to the sensor. You can use the sensor name found in the scan *or* the 6 digit ID#. This will scan and connect to the sensor automatically. If multiple sensors with the same name are found, you will be prompted to select one.
 
 Examples:  
-`my_temp_sensor = PASCOBLEDevice('Temperature')`  
-`my_weather_sensor = PASCOBLEDevice('Weather')`  
-`my_temp_sensor = PASCOBLEDevice('111-123')`  
-`my_weather_sensor = PASCOBLEDevice('222-345')`  
+`my_temp_sensor = PASCOBLEDevice('Temperature') # Looks for any available Temperature sensors`  
+`my_weather_sensor = PASCOBLEDevice('Weather') # Looks for any available Weather sensor`  
+`my_temp_sensor = PASCOBLEDevice('111-123') # Look for any sensor with this unique ID`  
+`my_weather_sensor = PASCOBLEDevice('222-345') # Look for any sensor with this unique ID`  
 
 If you know you want to read JUST the Light measurements from the Weather sensor we can use one of these methods:  
 `my_weather_sensor = PASCOBLEDevice('Weather', 2)`  
@@ -78,14 +109,81 @@ If we want the Weather and Light measurements from the weather sensor we can con
 
 
 ### 4) Read sensor measurement data ###
+
 The values inside the paranthesis represent the measurement variable names.
 
-To read the `Temperature` we will say `my_temperature_sensor.value_of('Temperature')`  
-To read the `RelativeHumidity` we will say `my_weather_sensor.value_of('RelativeHumidity')`
+To read the `Temperature`   
+`my_temperature_sensor.value_of('Temperature')`  
 
+To read the `RelativeHumidity`  
+`my_weather_sensor.value_of('RelativeHumidity')`
+
+---
+
+## /\/code.Node Specific Commands ##
+
+### Set LEDs on the 5x5 Display ###
+
+```
+x, y coordinates on the //code.Node 5x5 LED display
+---------------------------
+| 0,0  1,0  2,0  3,0  4,0 |
+| 0,1  1,1  2,1  3,1  4,1 |
+| 0,2  1,2  2,2  3,2  4,2 |
+| 0,3  1,3  2,3  3,3  4,3 |
+| 0,4  1,4  2,4  3,4  4,4 |
+---------------------------
+intensity range is 0-10
+```
+
+#### Set one LED  ####
+
+`code_node_device.code_node_set_led(x, y, intensity)`  
+Example: `code_node_device.code_node_set_led(2, 0, 10)` will turn the top center LED on at max brightness
+
+
+#### Set multiple LEDs at once ####
+
+`code_node_device.code_node_set_leds(led_array, intensity)`  
+An example of an `led_array` is `[[4,4], [0,4], [2,2]]`
+
+
+### Set the RGB LED ###
+
+`code_node_device.code_node_set_rgb_leds(r, g, b)`  
+`r`, `g`, `b` indicate brightness ranges between 0 and 10.
+
+
+### Turn the speaker on/off ###
+
+`code_node_device.code_node_set_sound_frequency(frequency)`  
+Send `frequency` in Hz
+
+
+### Reset the code_node outputs ###
+
+`code_node_device.code_node_reset()`  
+Turn the 5x5 LED display, RGB LED off and speaker off.
+
+### The character library ###
+
+
+#### Scroll Text ####
+
+`code_node_device.code_node_scroll_text(string_to_scroll)`  
+Scroll text on the 5x5 LED display. Requires importing the `character_library` to the project.
+
+#### Display Icons ####
+`code_node_device.code_node_show_icon(icon_name)`  
+Show an icon on the 5x5 LED Display. Requires importing the `character_library` to the project. Refer to the library file to see available options.
+
+---
 
 ## Let's put it all together ##
-Example 1: Connect to a Wireless Temperature Sensor and get one reading:
+
+### Example 1: ###
+
+Connect to a Wireless Temperature Sensor and get one reading:
 ```
 from pasco_ble import PASCOBLEDevice
 
@@ -99,7 +197,9 @@ if __name__ == "__main__":
     main()
 ```
 
-Example 2: Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement so we don't want to specify a device. We want to constantly read and display the result.
+### Example 2: ###
+
+Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement so we don't want to specify a device. We want to constantly read and display the result.
 
 ```
 from pasco_ble import PASCOBLEDevice
@@ -128,4 +228,37 @@ if __name__ == "__main__":
     main()
 ```
 
-Example 3: 
+### Example 3: ###
+
+We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
+
+```
+import character_library
+
+from pasco_ble import PASCOBLEDevice
+
+
+def main():
+    code_node_device = PASCOBLEDevice('//code.Node','a')
+    force_accel_device = PASCOBLEDevice('Force','a')
+
+    code_node_device.code_node_reset()
+    light_on = False
+
+    while True:
+        if force_accel_device.value_of('Force') > 10:
+            if light_on == False:
+                code_node_device.code_node_set_rgb_leds(5,5,5)
+                code_node_device.code_node_set_sound_frequency(200)
+                code_node_device.code_node_show_icon(character_library.Icons().alien)
+                light_on = True
+            else:
+                code_node_device.code_node_reset()
+                light_on = False
+            while force_accel_device.value_of('Force') > 10:
+                pass
+
+
+if __name__ == "__main__":
+    main()
+```
