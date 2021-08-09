@@ -16,7 +16,7 @@ Import the `PASCOBLEDevice` object from the pasco_ble file into your project fil
 ### 1) Initiate an object for the sensor ###
 `my_sensor = PASCOBLEDevice()`
 
-### 2) Scan for potential sensors ###
+### 2) Scan for available bluetooth (BLE) sensors ###
 `my_sensor.scan()  # Returns list of BLE devices found in the scan.`
 
 ### 3) Connect to a sensor found from the scan ###
@@ -25,6 +25,7 @@ Connect to a BLE device found from the scan:
 
 ### Example of how to scan/connect ###
 ```
+my_sensor = PASCOBLEDevice()
 found_devices = my_sensor.scan()
 
 print('\nDevices Found')
@@ -33,7 +34,7 @@ for i, ble_device in enumerate(found_devices):
     print(f'{i}: {display_name[0]}')
 
 # Auto connect if only one sensor found
-selected_device = input('Select a device: ')
+selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
 ble_device = found_devices[int(selected_device)]
 
 my_sensor.connect(ble_device)
@@ -58,8 +59,8 @@ Enter [default: a]:
 
 The down side of selecting all is that it will be a greater burden on the battery.
 
-### If you want to specify the sensor ID to quickly connect ###
-There are a few ways to quickly connect to the sensor. You can use the sensor name found in the scan *or* the 6 digit ID#. This will scan and connect to the sensor automatically.
+### Connect to a sensor programatically ###
+There are a few ways to quickly connect to the sensor. You can use the sensor name found in the scan *or* the 6 digit ID#. This will scan and connect to the sensor automatically. If multiple sensors with the same name are found, you will be prompted to select one.
 
 Examples:  
 `my_temp_sensor = PASCOBLEDevice('Temperature')`  
@@ -67,19 +68,38 @@ Examples:
 `my_temp_sensor = PASCOBLEDevice('111-123')`  
 `my_weather_sensor = PASCOBLEDevice('222-345')`  
 
-If you know you want to read JUST the light measurements from the Weather sensor we can use this:  
+If you know you want to read JUST the Light measurements from the Weather sensor we can use one of these methods:  
 `my_weather_sensor = PASCOBLEDevice('Weather', 2)`  
+`my_weather_sensor = PASCOBLEDevice('222-345', 2)`  
+
+If we want the Weather and Light measurements from the weather sensor we can connect these ways:  
+`my_weather_sensor = PASCOBLEDevice('Weather', '0,2')`  
+`my_weather_sensor = PASCOBLEDevice('222-345', '0,2')`
 
 
 ### 4) Read sensor measurement data ###
-The values inside the paranthesis represent the Dictionary variable names.
+The values inside the paranthesis represent the measurement variable names.
 
-To read the `Temperature` we will say `my_sensor.value_of('Temperature')`  
-To read the `RelativeHumidity` we will say `my_sensor.value_of('RelativeHumidity')`
+To read the `Temperature` we will say `my_temperature_sensor.value_of('Temperature')`  
+To read the `RelativeHumidity` we will say `my_weather_sensor.value_of('RelativeHumidity')`
 
 
 ## Let's put it all together ##
-Example program to scan, select a sensor (we will use a Wireless Weather Sensor and read some measurements).
+Example 1: Connect to a Wireless Temperature Sensor and get one reading:
+```
+from pasco_ble import PASCOBLEDevice
+
+def main():
+    my_temp_sensor = PASCOBLEDevice('835-041', 'a')
+    
+    temp_value = my_temp_sensor.value_of('Temperature')
+    print(temp_value)
+
+if __name__ == "__main__":
+    main()
+```
+
+Example 2: Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement so we don't want to specify a device. We want to constantly read and display the result.
 
 ```
 from pasco_ble import PASCOBLEDevice
@@ -98,9 +118,14 @@ def main():
     
     ble_device = found_devices[int(selected_device)]
 
-    my_sensor.connect(ble_device)
-    # my_sensor.connect(ble_device,'a') # This will bypass the prompt and read all measurements
+    my_sensor.connect(ble_device, 'a') # Read all measurements
 
-    my_sensor.value_of('Temperature')
+    while True:
+        current_temp = my_sensor.value_of('Temperature')
+        print('The current temp is ' + str(current_temp))
 
+if __name__ == "__main__":
+    main()
 ```
+
+Example 3: 

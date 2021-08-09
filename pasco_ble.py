@@ -833,7 +833,7 @@ class PASCOBLEDevice():
             channel_id = self._variable_channel[variable_name]
             self._get_sensor_measurement(channel_id)
 
-            print(self._results)
+            #print(self._results)
 
             return self._results[variable_name]
         except KeyError:
@@ -1067,7 +1067,7 @@ async def period_callback_fn(device = PASCOBLEDevice, sample_period = 1):
 
 def main():
     # Scan for PASCO Devices
-    device = PASCOBLEDevice()
+    device = PASCOBLEDevice('Temperature')
     found_devices = device.scan()
     
     print('\nDevices Found')
