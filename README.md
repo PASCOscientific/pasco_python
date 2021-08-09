@@ -15,6 +15,8 @@ Import the `PASCOBLEDevice` object from the pasco_ble file into your project fil
 
 ## Connecting to a sensor ##
 
+---
+
 ### Available Commands ###
 `device = PASCOBLEDevice()` Create bluetooth sensor object  
 `device.scan()` Scan for available bluetooth devices. Returns a list of available devices  
@@ -22,21 +24,23 @@ Import the `PASCOBLEDevice` object from the pasco_ble file into your project fil
 `device.potential_values()` Get a list of available variable names for the sensor  
 `device.value_of()` Get a single measurement value  
 
-### 1) Initiate an object for the sensor ###
+---
+
+### Step 1: Initiate an object for the sensor ###
 
 `my_sensor = PASCOBLEDevice()`
 
 
-### 2) Scan for available bluetooth (BLE) sensors ###
+### Step 2: Scan for available bluetooth (BLE) sensors ###
 
-`my_sensor.scan()  # Returns list of BLE devices found in the scan.`
+`my_sensor.scan()  # Returns list of BLE devices found in the scan.`  
 `my_sensor.scan('Temperature') # Returns a list of Temperature sensors found`
 
 How to use:  
 `found_devices = my_sensor.scan()`
 
 
-### 3) Connect to a BLE sensor found from the scan ###
+### Step 3: Connect to a BLE sensor found from the scan ###
 
 Print a list of found devices (or use another option to browse the list)
 ```
@@ -48,7 +52,7 @@ Connect to one of the devices:
 `my_sensor.connect(found_devices[0])`
 
 
-### Full example of how to scan/connect ###
+### Example of how to scan/connect ###
 
 ```
 my_sensor = PASCOBLEDevice()
@@ -67,7 +71,7 @@ my_sensor.connect(ble_device)
 ```
 
 
-### Reading sensor measurement values ###
+### Step 4: Available sensor measurements ###
 
 If a sensor only has one measurement, like the Wireless Temperature Sensor, we will see:
 ```
@@ -86,10 +90,12 @@ a: All
 Enter [default: a]:
 ```
 
+The values inside the paranthesis during the device measurement selection represent the measurement variable names (used in Step 5).
+
 The down side of selecting all is that it will be a greater burden on the battery.
 
 
-### Connect to a sensor programatically ###
+#### Connect to a sensor programatically ####
 
 There are a few ways to quickly connect to the sensor. You can use the sensor name found in the scan *or* the 6 digit ID#. This will scan and connect to the sensor automatically. If multiple sensors with the same name are found, you will be prompted to select one.
 
@@ -108,11 +114,11 @@ If we want the Weather and Light measurements from the weather sensor we can con
 `my_weather_sensor = PASCOBLEDevice('222-345', '0,2')`
 
 
-### 4) Read sensor measurement data ###
+### Step 5: Reading data from a sensor ###
 
-The values inside the paranthesis represent the measurement variable names.
+The measurement variable names come from Step 4
 
-To read the `Temperature`   
+To read the `Temperature`  
 `my_temperature_sensor.value_of('Temperature')`  
 
 To read the `RelativeHumidity`  
