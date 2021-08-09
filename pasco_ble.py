@@ -196,7 +196,7 @@ class PASCOBLEDevice():
 
         else:
             self._set_device_params(ble_device)
-            print("Connected to " + self._name)
+            print("\nConnected to " + self._name)
 
             if self._dev_type == 'AirLink':
                 self._send_command(self.V_SENSOR_1_SERVICE_ID, [0x08], True)
@@ -273,10 +273,10 @@ class PASCOBLEDevice():
             ble_device (BLEDevice): The user selected BLE device
         """
         self._address = ble_device.address
-        self._name = ble_device.name
         name_parts = ble_device.name.rsplit(' ', 1)
         self._dev_type = name_parts[0]
         self._serial_id = name_parts[1][0:7]
+        self._name = self._dev_type + ' ' + self._serial_id
         self._interface_id = self._decode64(name_parts[1][8]) + 1024
 
 
@@ -1066,7 +1066,7 @@ async def period_callback_fn(device = PASCOBLEDevice, sample_period = 1):
                 pass
 
 def main():
-    # Connect to PASCO Device
+    # Scan for PASCO Devices
     device = PASCOBLEDevice()
     found_devices = device.scan()
     
