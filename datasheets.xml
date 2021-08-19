@@ -1398,8 +1398,8 @@
       </Sensor>
       <Sensor ID="2020" Tag="WirelessTemperatureSensor" DefaultRate="2Hz" IconID="136" MaxRate="10Hz" Model="PS-3201">
         <Measurement ID="0" NameTag="RawTemperature" Type="RawDigital" DataSize="2" Internal="1"/>
-		<Measurement ID="1" NameTag="Temperature" UnitType="DegC" Type="UserCal" Inputs="2" Params="0,0,100,100" CalFlags="1,1,1,1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1"/>
-		<Measurement ID="2" NameTag="UncalTemperature" UnitType="DegC" Type="LinearConv" Inputs="0" Params="0.00268127,-46.85" Internal="1" MeasType="Temperature"/>
+        <Measurement ID="1" NameTag="Temperature" UnitType="DegC" Type="UserCal" Inputs="2" Params="0,0,100,100" CalFlags="1,1,1,1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1"/>
+        <Measurement ID="2" NameTag="UncalTemperature" UnitType="DegC" Type="LinearConv" Inputs="0" Params="0.00268127,-46.85" Internal="1" MeasType="Temperature"/>
       </Sensor>
       <Sensor ID="2021" Tag="WirelessPHSensor" DefaultRate="5Hz" IconID="139" MaxRate="50Hz" Model="PS-3204">
         <Measurement ID="0" NameTag="adc" Type="RawDigital" DataSize="2" Internal="1"/>

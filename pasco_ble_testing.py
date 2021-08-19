@@ -12,6 +12,7 @@ import character_library
 from bleak import BleakClient, discover
 from uuid import UUID
 
+# TODO: What happens if we try to connect twice?
 
 class PASCOBLEDevice():
     """
@@ -1067,7 +1068,7 @@ async def period_callback_fn(device = PASCOBLEDevice, sample_period = 1):
 
 def main():
     # Scan for PASCO Devices
-    device = PASCOBLEDevice('Temperature')
+    device = PASCOBLEDevice()
     found_devices = device.scan()
     
     print('\nDevices Found')
@@ -1082,10 +1083,12 @@ def main():
 
     device.connect(ble_device,'a')
 
+    device.potential_values()
+
     #device.read_factory_cal(1)
 
-    sample_period = 1
-    device.start_periodic(sample_period, period_callback_fn(device, sample_period))
+    #sample_period = 1
+    #device.start_periodic(sample_period, period_callback_fn(device, sample_period))
 
     #device = PASCOBLEDevice('//code.Node','a')
     #device2 = PASCOBLEDevice('Force','a')
