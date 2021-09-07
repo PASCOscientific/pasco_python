@@ -7,12 +7,12 @@ import requests
 import time
 import xml.etree.ElementTree as ET
 
-import character_library
-
 from bleak import BleakClient, discover
 from uuid import UUID
 
-# TODO: What happens if we try to connect twice?
+from bleak.backends.device import BLEDevice
+
+#paspy0.1.0
 
 class PASCOBLEDevice():
     """
@@ -26,11 +26,6 @@ class PASCOBLEDevice():
 
     GCMD_READ_ONE_SAMPLE = 0x05
     GCMD_XFER_BURST_RAM = 0X0E
-
-    GCMD_CODENODE_CMD = 0x37
-    CODENODE_CMD_SET_LED = 0X02
-    CODENODE_CMD_SET_LEDS = 0X03
-    CODENODE_CMD_SET_SOUND_FREQ = 0X04
 
     GRSP_RESULT = 0XC0                      # Generic response packet
     GEVT_SENSOR_ID = 0x82                   # Get Sensor ID (for AirLink)
@@ -130,7 +125,7 @@ class PASCOBLEDevice():
         return self._measurement_sensor_ids
 
 
-    def scan(self, sensor_name=None):
+    def scan(self, sensor_name_filter=None):
         """
         Scans for all PASCO devices
 
@@ -139,8 +134,8 @@ class PASCOBLEDevice():
         """
         try:
             # Get list of PASCO BLE Devices found
-            if sensor_name:
-                pasco_device_names = [ sensor_name ]
+            if sensor_name_filter:
+                pasco_device_names = [ sensor_name_filter ]
             else:
                 pasco_device_names = self._compatible_devices
 
@@ -180,7 +175,7 @@ class PASCOBLEDevice():
         return UUID(uuid)
 
 
-    def connect(self, ble_device):
+    def connect(self, ble_device: BLEDevice):
         """
         Connect to a bluetooth device
 
@@ -188,6 +183,31 @@ class PASCOBLEDevice():
             ble_device(BLEDevice): Device object discovered up when doing scan
         """
         if self._client is None:
+            self._client = BleakClient(ble_device.address)
+
+            try:
+                self._loop.run_until_complete(self._async_connect())
+            except ConnectionError:
+                exit(1)
+            else:
+                self._set_device_params(ble_device)
+                self._loop.run_until_complete(self._initialize_sensor_values())
+        else:
+            raise self.BLEAlreadyConnectedError()
+
+
+
+    def connect_by_id(self, pasco_device_id):
+        """
+        Connect to a bluetooth device
+
+        Args:
+            ble_device(BLEDevice): Device object discovered up when doing scan
+        """
+        if self._client is None:
+            found_devices = self.scan(pasco_device_id)
+            ble_device = found_devices[0]
+
             self._client = BleakClient(ble_device.address)
 
             try:
@@ -210,6 +230,10 @@ class PASCOBLEDevice():
 
         uuid = self._set_uuid(self.SENSOR_SERVICE_ID, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
+
+
+    def keepalive(self):
+        self._send_command(self.SENSOR_SERVICE_ID, [0x00], False)
 
 
     def _set_handle_service(self):
@@ -422,6 +446,18 @@ class PASCOBLEDevice():
                 }
                 for c in interface.findall("./Channel")
             ]
+            """
+            device_sensors_class = [
+                {
+                    id = int(c.get('ID')),
+                    sensor_id = int(c.get('SensorID')) if 'SensorID' in c.attrib else '',
+                    name = c.get('NameTag'),
+                    type = c.get('Type'),
+                    output_type = c.get('OutputType') if 'OutputType' in c.attrib else ''
+                }
+                for c in interface.findall("./Channel")
+            ]
+            """
             
             for sensor in device_sensors:
                 sensor_data = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % str(sensor['sensor_id']))
@@ -432,42 +468,40 @@ class PASCOBLEDevice():
 
             for sensor in device_sensors:
                 if sensor['type'] == 'Pasport':
-                    sensor_id = sensor['id']
-
-                    self._data_ack_counter[sensor_id] = 0
-                    self._data_stack[sensor_id] = []
-                    self._sensor_measurements[sensor_id] = {}
+                    self._data_ack_counter[sensor['id']] = 0
+                    self._data_stack[sensor['id']] = []
+                    self._sensor_measurements[sensor['id']] = {}
                                         
                     xml_measurements = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % sensor['sensor_id'])
                     for measurement in xml_measurements.findall("./Measurement"):
                         measurement_id = {int(measurement.get('ID')): measurement.attrib}
-                        self._sensor_measurements[sensor_id].update(measurement_id)
+                        self._sensor_measurements[sensor['id']].update(measurement_id)
 
-                    for m_id, m in self._sensor_measurements[sensor_id].items():
-                        m['ID'] = int(m['ID'])
-                        m['Type'] = m['Type'] if 'Type' in m else ''
-                        m['Visible'] = int(m['Visible']) if 'Visible' in m else 0
-                        m['Internal'] = int(m['Internal']) if 'Internal' in m else 0
-                        if 'DataSize' in m:
-                            m['DataSize'] = int(m['DataSize'])
-                            sensor['total_data_size'] += m['DataSize']
-                        if 'Inputs' in m and m['Inputs'].isnumeric(): m['Inputs'] = int(m['Inputs'])
-                        if 'Precision' in m and m['Precision'].isnumeric(): m['Precision'] = int(m['Precision'])
+                    for sensor_m_id, sensor_m in self._sensor_measurements[sensor['id']].items():
+                        sensor_m['ID'] = int(sensor_m['ID'])
+                        sensor_m['Type'] = sensor_m['Type'] if 'Type' in sensor_m else ''
+                        sensor_m['Visible'] = int(sensor_m['Visible']) if 'Visible' in sensor_m else 0
+                        sensor_m['Internal'] = int(sensor_m['Internal']) if 'Internal' in sensor_m else 0
+                        if 'DataSize' in sensor_m:
+                            sensor_m['DataSize'] = int(sensor_m['DataSize'])
+                            sensor['total_data_size'] += sensor_m['DataSize']
+                        if 'Inputs' in sensor_m and sensor_m['Inputs'].isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
+                        if 'Precision' in sensor_m and sensor_m['Precision'].isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
                         #if m['Type'] == 'FactoryCal':
-                            # await self.read_factory_cal(sensor_id)
+                            # await self.read_factory_cal(sensor.id)
                             # Do Factory Cal reading here
                         #TODO: This is a temporary workaround for the code node cart
-                        if m['NameTag'] == "RawCartPosition":
-                            m['DataSize'] = 0
+                        if sensor_m['NameTag'] == "RawCartPosition":
+                            sensor_m['DataSize'] = 0
 
                     # Initialize internal sensor measurement values
-                    self._sensor_data[sensor_id] = { m_id: None for m_id in self._sensor_measurements[sensor_id] }
+                    self._sensor_data[sensor['id']] = { m_id: None for m_id in self._sensor_measurements[sensor['id']] }
             
             # Initialize device measurement values
             self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in device_sensors for measurement in sensor['measurements'] }
             self._data_results = { m: None for sensor in device_sensors for m in sensor['measurements'] }
 
-            self._device_sensors = device_sensors
+            self._device_sensors = {sensor['name'] : sensor for sensor in device_sensors}
 
         except:
             print("Could not setup sensor measurements")
@@ -479,75 +513,80 @@ class PASCOBLEDevice():
         """
         if self.is_connected() is None:
             raise self.DeviceNotConnected()
-       
-        return self._device_sensors
+
+        return [sensor_name for sensor_name, sensor in self._device_sensors.items()]
 
 
-    def get_measurement_list(self):
-        self._device_measurements = [measurement for measurement in self._data_results]
+    def get_measurement_list(self, sensor_name=None):
+        if sensor_name == None:
+            measurement_list = [measurement for measurement in self._data_results]
+        else:
+            measurement_list = self._device_sensors[sensor_name]['measurements'] if sensor_name in self._device_sensors else None
 
-        return self._device_measurements
+        return measurement_list
 
 
-    def read_measurement_data(self, measurements):
+    def read_data(self, measurement):
 
-        try:
-            if type(measurements) is list:
-                try:
-                    sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
-                except:
-                    raise self.MeasurementNotFound
+        if measurement == None:
+            pass
+        else:
+            try:
+                sensor_id = self._measurement_sensor_ids[measurement]
+            except:
+                raise self.MeasurementNotFound
+            
+            self._get_sensor_measurements(sensor_id)
 
+            return self._data_results[measurement]
+
+        return None
+
+
+    def read_data_list(self, measurements):
+
+        if measurements == None:
+            pass
+        else:
+            try:
+                sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
+            except:
+                raise self.MeasurementNotFound
+
+            try:
                 for sensor_id in sensor_ids:
                     self._get_sensor_measurements(sensor_id)
                     
-                requested_results = {}
+                measurement_data = {}
                 for measurement in measurements:
-                    requested_results[measurement] = self._data_results[measurement]
+                    measurement_data[measurement] = self._data_results[measurement]
 
-                return requested_results
-            
-            else:
-                try:
-                    sensor_id = self._measurement_sensor_ids[measurements]
-                except:
-                    raise self.MeasurementNotFound
-                
-                self._get_sensor_measurements(sensor_id)
+                return measurement_data
 
-                return self._data_results[measurements]
-
-        except: 
-            raise self.InvalidParameter
-
-
-        """
-        try:
-            try:
-                if type(measurements) is not list: measurements = [ measurements ]
             except:
                 raise self.InvalidParameter
 
+        return None
+
+
+    def get_measurement_unit(self, measurements):
+        if type(measurements) is list:
             sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
 
-            for sensor_id in sensor_ids:
-                self._get_sensor_measurements(sensor_id)
+            measurement_units = {
+                measurement: m['UnitType']
+                for sensor_id in sensor_ids
+                for m_id, m in self._sensor_measurements[sensor_id].items()
+                for measurement in measurements
+                if m['NameTag'] == measurement
+            }
+            return measurement_units
 
-            requested_results = {}
-            for measurement in measurements:
-                requested_results[measurement] = self._data_results[measurement]
-
-            return requested_results
-        except self.MeasurementNotFound:
-            pass
-        """
-
-
-    def get_measurement_unit(self, measurement):
-        sensor_id = self._measurement_sensor_ids[measurement]
-        for m_id, m in self._sensor_measurements[sensor_id].items():
-            if m['NameTag'] == measurement:
-                return m['UnitType']
+        else:
+            sensor_id = self._measurement_sensor_ids[measurements]
+            for m_id, m in self._sensor_measurements[sensor_id].items():
+                if m['NameTag'] == measurements:
+                    return m['UnitType']
 
         return None
         
@@ -639,7 +678,7 @@ class PASCOBLEDevice():
     def _get_sensor_measurements(self, sensor_id):
         service_id = sensor_id + 1
 
-        for sensor in self._device_sensors:
+        for sensor_name, sensor in self._device_sensors.items():
             if sensor['id'] == sensor_id:
                 packet_size = sensor['total_data_size']
 
@@ -704,13 +743,6 @@ class PASCOBLEDevice():
 
                     val = {m_id: result_value}
                     self._sensor_data[sensor_id].update(val)
-
-            #"""
-            #print("***CALC***")
-            #print(self._sensor_data)
-            #print(str(self._sensor_data) + '\r', end='')
-            #print("**********")
-            #"""
 
             # Set visible data variables
             try:
@@ -798,19 +830,56 @@ class PASCOBLEDevice():
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
 
             if raw_equation.startswith('usound'):
-                uSoundVars = raw_equation.replace('usound(','')
-                uSoundVars = uSoundVars.replace(')','')
+                usound_eqn = raw_equation.replace('usound(','')
+                usound_eqn = usound_eqn.replace(')','')
+                usound_vals = usound_eqn.split(',')
 
-                usoundVals = uSoundVars.split(',')
+                ping_echo_time = float(usound_vals[0])
+                speed_of_sound = float(usound_vals[1])
 
-                pingEchoTime = float(usoundVals[0])
-                speedOfSound = float(usoundVals[1])
+                result_value = (ping_echo_time/1000000) * speed_of_sound / 2 # result in meters
 
-                result_value = (pingEchoTime/1000000) * speedOfSound / 2 # result in meters
+            elif raw_equation.startswith('dewpoint'):
+                dewpoint_eqn = raw_equation.replace('dewpoint(','')
+                dewpoint_eqn = dewpoint_eqn.replace(')','')
+                dewpoint_vals = dewpoint_eqn.split(',')
 
+                temp_c = float(dewpoint_vals[0])
+                relative_humidity = float(dewpoint_vals[1])
+                vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
+                vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
+
+                result_value = (-443.22 + 237.7 * math.log(vapor_pressure_actual)) / (-math.log(vapor_pressure_actual) + 19.08)
+
+            elif raw_equation.startswith('windchill'):
+                windchill_eqn = raw_equation.replace('windchill(','')
+                windchill_eqn = windchill_eqn.replace(')','')
+                windchill_vals = windchill_eqn.split(',')
+
+                temp_f = (9 * float(windchill_vals[0]) / 5) + 32
+                wind_mph = float(windchill_vals[1]) * 2.237
+
+                if( wind_mph < 3.0 or temp_f > 50.0 ):
+                    wind_chill_f = temp_f
+                else:
+                    wind_chill_f = 35.74 + 0.6215 * temp_f - 35.75 * pow( wind_mph, 0.16 ) + 0.4275 * temp_f * pow( wind_mph, 0.16 )
+
+                result_value = 5 * (wind_chill_f - 32) / 9
+            
+            elif raw_equation.startswith('heatindex'):
+                heatindex_eqn = raw_equation.replace('heatindex(','')
+                heatindex_eqn = heatindex_eqn.replace(')','')
+                heatindex_vals = heatindex_eqn.split(',')
+
+                temp_c = float(heatindex_vals[0])
+                relative_humidity = float(heatindex_vals[1])
+                vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
+                vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
+
+                result_value = temp_c + 0.55555 * (vapor_pressure_actual - 10.0)
 
             elif raw_equation.startswith('codenodepos'):
-                result_value = None
+                None
                 
             else:
                 try:
@@ -860,102 +929,6 @@ class PASCOBLEDevice():
             return 255
         else:
             return result
-
-
-    def code_node_set_led(self, x, y, intensity):
-        """
-        Set an individual LED on the 5x5 matrix
-
-        Args:
-            x (int): [0-4] column value (top to bottom)
-            y (int): [0-4] row value (left to right)
-            intensity (int): [0-10] brightness control of LED
-        """
-        ledIndex = 20 - (y * 5) + x # Converts xy position to LED index
-        ledIntensity = self._led_0_to_10(intensity)
-
-        cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LED, ledIndex, ledIntensity ]
-        self._send_command(0, cmd, True)
-        self.loop.run_until_complete(self.single_listen(self.SENSOR_SERVICE_ID))
-
-
-    def code_node_set_leds(self, led_array=[], intensity=5):
-        """
-        Set multiple LEDs on the 5x5 Matrix
-
-        Args:
-            led_array (List): [[x0,y0]... [x4,y4]] A list of coordinate pairs, ex: [[4,4], [0,4], [2,2]]
-                ---------------------------
-                | 0,0  1,0  2,0  3,0  4,0 |
-                | 0,1  1,1  2,1  3,1  4,1 |
-                | 0,2  1,2  2,2  3,2  4,2 |
-                | 0,3  1,3  2,3  3,3  4,3 |
-                | 0,4  1,4  2,4  3,4  4,4 |
-                ---------------------------
-            intensity (int): [0-10] brightness control of LEDs in the array
-        """
-        led_activate = 0
-        for x,y in led_array:
-            led_index = 20 - (y * 5) + x # Converts xy position to LED index
-            led_activate += 2 ** led_index
-
-        led_intensity = self._led_0_to_10(intensity)
-
-        cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS,
-                led_activate & 0xFF, led_activate>>8 & 0XFF, led_activate>>16 & 0XFF, led_activate>>24 & 0XFF,
-                led_intensity ]
-        self._send_command(0, cmd)
-        self.loop.run_until_complete(self.single_listen(self.SENSOR_SERVICE_ID))
-
-
-    def code_node_set_rgb_leds(self, r=0, g=0, b=0):
-        """
-        Set the //code.Node's RGB LED
-        
-        Args:
-            r (int): [0-10] brightness control of Red LED
-            g (int): [0-10] brightness control of Green LED
-            b (int): [0-10] brightness control of Blue LED
-        """
-
-        led_r = self._led_0_to_10(r)
-        led_g = self._led_0_to_10(g)
-        led_b = self._led_0_to_10(b)
-
-        cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS, led_r, led_g, led_b, 0X80, 0X00 ]
-        self._send_command(0, cmd, True)
-        self.loop.run_until_complete(self.single_listen(self.SENSOR_SERVICE_ID))
-
-
-    def code_node_set_sound_frequency(self, frequency):
-        """
-        Control the code node's built in speaker output frequency
-
-        Args:
-            Frequency (in hertz)
-        """
-        cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_SOUND_FREQ, frequency & 0xFF, frequency>>8 & 0XFF ]
-        self._send_command(0, cmd, True)
-        self.loop.run_until_complete(self.single_listen(self.SENSOR_SERVICE_ID))
-
-
-    def code_node_scroll_text(self, word):
-        matrix = character_library.get_word(word)
-        #print(matrix)
-        for disp in matrix:
-            self.code_node_set_leds(disp)
-
-
-    def code_node_show_icon(self, icon):
-        matrix = character_library.get_icon(icon)
-        #print(matrix)
-        self.code_node_set_leds(matrix)
-
-
-    def code_node_reset(self):
-        self.code_node_set_rgb_leds(0,0,0)
-        self.code_node_set_leds([])
-        self.code_node_set_sound_frequency(0)
 
 
     async def read_factory_cal(self, channel_id):
