@@ -1,23 +1,18 @@
 import asyncio
-import dweepy
 import math
-import os
 import re
-import requests
-import time
 import xml.etree.ElementTree as ET
 
 from bleak import BleakClient, discover
+from bleak.backends.device import BLEDevice
 from uuid import UUID
 
-from bleak.backends.device import BLEDevice
-
-#paspy0.1.0
 
 class PASCOBLEDevice():
     """
     PASCO Device object that has functions for connecting and getting data
     """
+
     SENSOR_SERVICE_ID = 0
 
     SEND_CMD_CHAR_ID = 2
@@ -34,10 +29,8 @@ class PASCOBLEDevice():
     def __init__(self):
         """
         Create a PASCO BLE Device object
-
-        Args:
-            sensor_name (string): Optional - include a sensor name/6-digit ID to connect quickly
         """
+    
         self._client = None
         self._address = None
         self._name = None
@@ -89,7 +82,23 @@ class PASCOBLEDevice():
             'Diffraction',
             '//code.Node',
         ]
-        # self._not_compatible_devices = ['Smart Gate', 'Sound', 'EKG', 'Melt Temp', 'Moisture', 'Colorimeter', 'AC/DC Module', 'LightSource', 'STEM Module', 'AirLink', 'Geiger', 'Spirometer', 'CO',]
+        """
+        self._not_compatible_devices = [
+            'Smart Gate',
+            'Sound',
+            'EKG',
+            'Melt Temp',
+            'Moisture',
+            'Colorimeter',
+            'AC/DC Module',
+            'LightSource',
+            'STEM Module',
+            'AirLink',
+            'Geiger',
+            'Spirometer',
+            'CO',
+        ]
+        """
 
 
     @property
@@ -129,9 +138,13 @@ class PASCOBLEDevice():
         """
         Scans for all PASCO devices
 
+        Args:
+            sensor_name_filter (string): Sensor name to scan for
+
         Returns:
             List of devices that are compatible with this library
         """
+    
         try:
             # Get list of PASCO BLE Devices found
             if sensor_name_filter:
@@ -165,12 +178,13 @@ class PASCOBLEDevice():
         Create UUID for service and characteristic
 
         Args:
-            sensor_service_id: The sensor service we're connecting to
-            uuid_char_id: The characteristic we want to communicate with
+            service_id: The sensor service we're connecting to
+            characteristic_id: The characteristic we want to communicate with
         
         Returns:
             uuid object
         """
+    
         uuid = "4a5c000" + str(service_id) + "-000" + str(characteristic_id) + "-0000-0000-5c1e741f1c00"
         return UUID(uuid)
 
@@ -180,8 +194,9 @@ class PASCOBLEDevice():
         Connect to a bluetooth device
 
         Args:
-            ble_device(BLEDevice): Device object discovered up when doing scan
+            ble_device (BLEDevice): Device object discovered up when doing scan
         """
+    
         if self._client is None:
             self._client = BleakClient(ble_device.address)
 
@@ -202,8 +217,9 @@ class PASCOBLEDevice():
         Connect to a bluetooth device
 
         Args:
-            ble_device(BLEDevice): Device object discovered up when doing scan
+            pasco_device_id (string): Device's 6 digit ID (with dash)
         """
+    
         if self._client is None:
             found_devices = self.scan(pasco_device_id)
             ble_device = found_devices[0]
@@ -509,7 +525,7 @@ class PASCOBLEDevice():
 
     def get_sensor_list(self):
         """
-        Get sensor measurements and channels from the datasheet
+        Return list of sensor names that a device has
         """
         if self.is_connected() is None:
             raise self.DeviceNotConnected()
@@ -518,6 +534,13 @@ class PASCOBLEDevice():
 
 
     def get_measurement_list(self, sensor_name=None):
+        """
+        Return list of measurements that a device can read
+
+        Args:
+            sensor_name (string): Optional paramater to only return measurements for a sensor
+        """
+    
         if sensor_name == None:
             measurement_list = [measurement for measurement in self._data_results]
         else:
@@ -527,6 +550,12 @@ class PASCOBLEDevice():
 
 
     def read_data(self, measurement):
+        """
+        Read a sensor measurement
+
+        Args:
+            measurement (string): name of measurement we want to read
+        """
 
         if measurement == None:
             pass
@@ -544,6 +573,12 @@ class PASCOBLEDevice():
 
 
     def read_data_list(self, measurements):
+        """
+        Read multiple sensor measurements
+
+        Args:
+            measurement (List(string)): List of measurements that we want to read
+        """
 
         if measurements == None:
             pass
@@ -570,6 +605,12 @@ class PASCOBLEDevice():
 
 
     def get_measurement_unit(self, measurement):
+        """
+        Return a measurement's default units
+
+        Args:
+            measurement (string): name of measurement we want the units for
+        """
 
         if measurement == None:
             pass
@@ -587,6 +628,13 @@ class PASCOBLEDevice():
 
             
     def get_measurement_unit_list(self, measurements):
+        """
+        Return default units for multiple measurements
+
+        Args:
+            measurements (List(string)): List of measurements that we want the units for
+        """
+
         if measurements == None:
             pass
     

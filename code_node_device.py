@@ -32,6 +32,7 @@ class CodeNodeDevice(PASCOBLEDevice):
             y (int): [0-4] row value (left to right)
             intensity (int): [0-255] brightness control of LED
         """
+
         led_index = 20 - (y * 5) + x # Converts xy position to LED index
         led_intensity = self._led_0_to_255(intensity)
 
@@ -55,6 +56,7 @@ class CodeNodeDevice(PASCOBLEDevice):
                 ---------------------------
             intensity (int): [0-255] brightness control of LEDs in the array
         """
+
         led_activate = 0
         for x,y in led_array:
             led_index = 20 - (y * 5) + x # Converts xy position to LED index
@@ -74,10 +76,9 @@ class CodeNodeDevice(PASCOBLEDevice):
         Set the //code.Node's RGB LED
         
         Args:
-            0-255
-            r (int): [0-10] brightness control of Red LED
-            g (int): [0-10] brightness control of Green LED
-            b (int): [0-10] brightness control of Blue LED
+            r (int): [0-255] brightness control of Red LED
+            g (int): [0-255] brightness control of Green LED
+            b (int): [0-255] brightness control of Blue LED
         """
 
         led_r = self._led_0_to_255(r)
