@@ -82,7 +82,7 @@ for i, ble_device in enumerate(found_devices):
     print(f'{i}: {ble_device.name}')
 
 selected_device = input('Select a device: ') 
-my_sensor.connect(selected_device)
+my_sensor.connect(found_devices[int(selected_device)])
 
 ```
 
@@ -235,13 +235,16 @@ Turn the 5x5 LED display, RGB LED off and speaker off.
 
 Connect to a Wireless Temperature Sensor and get one reading:
 ```
-from pasco_ble import PASCOBLEDevice
+from pasco_py_beta import PASCOBLEDevice
 
 def main():
-    my_temp_sensor = PASCOBLEDevice('835-041', 'a')
+    my_temp_sensor = PASCOBLEDevice()
+    my_temp_sensor.connect_by_id('055-808')
     
-    temp_value = my_temp_sensor.value_of('Temperature')
-    print(temp_value)
+    temp_value = my_temp_sensor.read_data('Temperature')
+    temp_units = my_temp_sensor.get_measurement_unit('Temperature')
+
+    print(f'{temp_value} {temp_units}')
 
 if __name__ == "__main__":
     main()
@@ -252,7 +255,7 @@ if __name__ == "__main__":
 Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement so we don't want to specify a device. We want to constantly read and display the result.
 
 ```
-from pasco_ble import PASCOBLEDevice
+from pasco_py_beta import PASCOBLEDevice
 
 def main():
     my_sensor = PASCOBLEDevice()
@@ -268,11 +271,11 @@ def main():
     
     ble_device = found_devices[int(selected_device)]
 
-    my_sensor.connect(ble_device, 'a') # Read all measurements
+    my_sensor.connect(ble_device)
 
     while True:
-        current_temp = my_sensor.value_of('Temperature')
-        print('The current temp is ' + str(current_temp))
+        current_temp = my_sensor.read_data('Temperature')
+        print(f'The current temp is {current_temp}')
 
 if __name__ == "__main__":
     main()
@@ -283,31 +286,54 @@ if __name__ == "__main__":
 We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
 
 ```
+from pasco_py_beta import PASCOBLEDevice
+from code_node_device import CodeNodeDevice
 import character_library
-
-from pasco_ble import PASCOBLEDevice
 
 
 def main():
-    code_node_device = PASCOBLEDevice('//code.Node','a')
-    force_accel_device = PASCOBLEDevice('Force','a')
 
-    code_node_device.code_node_reset()
+    code_node_device = CodeNodeDevice()
+    found_devices = code_node_device.scan('//code.Node')
+
+    if found_devices:
+        for i, ble_device in enumerate(found_devices):
+            print(f'{i}: {ble_device.name}')
+        
+        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+        code_node_device.connect(found_devices[int(selected_device)])
+    else:
+        print("No Devices Found")
+        exit(1)
+
+    force_accel_device = PASCOBLEDevice()
+    found_devices = force_accel_device.scan('Force')
+
+    if found_devices:
+        for i, ble_device in enumerate(found_devices):
+            print(f'{i}: {ble_device.name}')
+        
+        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+        force_accel_device.connect(found_devices[int(selected_device)])
+    else:
+        print("No Devices Found")
+        exit(1)
+
+    code_node_device.reset()
     light_on = False
 
     while True:
-        if force_accel_device.value_of('Force') > 10:
+        if force_accel_device.read_data('Force') > 10:
             if light_on == False:
-                code_node_device.code_node_set_rgb_leds(5,5,5)
-                code_node_device.code_node_set_sound_frequency(200)
-                code_node_device.code_node_show_icon(character_library.Icons().alien)
+                code_node_device.set_rgb_led(100,100,100)
+                code_node_device.set_sound_frequency(200)
+                code_node_device.show_image_in_array(character_library.Icons().alien)
                 light_on = True
             else:
-                code_node_device.code_node_reset()
+                code_node_device.reset()
                 light_on = False
-            while force_accel_device.value_of('Force') > 10:
+            while force_accel_device.read_data('Force') > 10:
                 pass
-
 
 if __name__ == "__main__":
     main()
