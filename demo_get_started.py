@@ -16,8 +16,13 @@ def main():
     print('Devices Found')
     for i, ble_device in enumerate(found_devices):
         #print(ble_device.address)
+        print(f'{i}: {ble_device.name}')
+    '''
+    for i, ble_device in enumerate(found_devices):
+        #print(ble_device.address)
         display_name = ble_device.name.split('>')
         print(f'{i}: {display_name[0]}')
+    '''
 
     # Auto connect if only one sensor found
     selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
@@ -36,6 +41,11 @@ def main():
     #weather_measurement_list = device.get_measurement_list('WirelessWeatherSensor')
     #print(weather_measurement_list)
 
+    print(device.get_measurement_list('WirelessWeatherSensor'))
+    print(device.get_measurement_list('WirelessGPSSensor'))
+    print(device.get_measurement_list('WirelessLightSensor'))
+    print(device.get_measurement_list('WirelessCompass'))
+    
     temperature_measurement_list = device.get_measurement_list('WirelessTemperatureSensor')
     print(temperature_measurement_list)
 

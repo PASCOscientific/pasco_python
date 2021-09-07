@@ -569,30 +569,46 @@ class PASCOBLEDevice():
         return None
 
 
-    def get_measurement_unit(self, measurements):
-        if type(measurements) is list:
-            sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
+    def get_measurement_unit(self, measurement):
 
-            measurement_units = {
-                measurement: m['UnitType']
-                for sensor_id in sensor_ids
-                for m_id, m in self._sensor_measurements[sensor_id].items()
-                for measurement in measurements
-                if m['NameTag'] == measurement
-            }
-            return measurement_units
+        if measurement == None:
+            pass
 
         else:
-            sensor_id = self._measurement_sensor_ids[measurements]
-            for m_id, m in self._sensor_measurements[sensor_id].items():
-                if m['NameTag'] == measurements:
-                    return m['UnitType']
+            try:
+                sensor_id = self._measurement_sensor_ids[measurement]
+                for m_id, m in self._sensor_measurements[sensor_id].items():
+                    if m['NameTag'] == measurement:
+                        return m['UnitType']
+            except:
+                raise self.InvalidParameter
+
+        return None
+
+            
+    def get_measurement_unit_list(self, measurements):
+        if measurements == None:
+            pass
+    
+        else:
+            try:
+                sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
+
+                measurement_units = {
+                    measurement: m['UnitType']
+                    for sensor_id in sensor_ids
+                    for m_id, m in self._sensor_measurements[sensor_id].items()
+                    for measurement in measurements
+                    if m['NameTag'] == measurement
+                }
+                return measurement_units
+            except:
+                raise self.InvalidParameter
 
         return None
         
 
-
-    async def single_listen(self, service_id):
+    async def _single_listen(self, service_id):
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
 
@@ -637,7 +653,7 @@ class PASCOBLEDevice():
                     elif value[2] == 1: #SPI Data (ex: AirLink Interface connected)
                         pasport_service_id = 1
                         self._send_command(pasport_service_id, [ 0x08 ], True)
-                        self.loop.run_until_complete(self.single_listen(pasport_service_id))
+                        self.loop.run_until_complete(self._single_listen(pasport_service_id))
                         #TODO: AirLink things
 
                 # Error receiving data
@@ -685,7 +701,7 @@ class PASCOBLEDevice():
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
         self._send_command(service_id, one_shot_cmd, True)
-        self.loop.run_until_complete(self.single_listen(service_id))
+        self.loop.run_until_complete(self._single_listen(service_id))
 
         self._data_stack[sensor_id] = self._single_measurement
         self.loop.run_until_complete(self._decode_data(sensor_id))
@@ -890,45 +906,10 @@ class PASCOBLEDevice():
 
                 except:
                     # equation likely has a string in it
-                    print(f"Unable to calculate equation: {raw_equation}")
+                    # print(f"Unable to calculate equation: {raw_equation}")
+                    raise self.InvalidEquation()
 
         return result_value
-
-
-    def value_of(self, variable_name):
-        try:
-            channel_id = self._measurement_sensor_ids[variable_name]
-            self._get_sensor_measurements(channel_id)
-
-            #print(self._data_results)
-
-            return self._data_results[variable_name]
-        except KeyError:
-            print(f"Variable {variable_name} does not exist in the selected measurements")
-            raise
-
-
-    def _led_0_to_10(self, intensity):
-        """
-        Convert a 0-10 value to 0-255
-
-        Args:
-            intensity (int): [0-10] brightness of LED
-        """
-        if intensity <= 0:
-            return 0
-        elif intensity > 10:
-            return 255
-
-        # Got this equation by curve-fitting gamma correction values from the LED controller datasheet
-        result = int(2.1 * intensity ** 2 + 4.93 * intensity - 1.23)
-
-        if result <= 0:
-            return 0
-        if result > 255:
-            return 255
-        else:
-            return result
 
 
     async def read_factory_cal(self, channel_id):
@@ -956,13 +937,13 @@ class PASCOBLEDevice():
                     num_bytes & 0xFF, num_bytes>>8 & 0XFF ]
 
         self._send_command(service_id, command, True)
-        await self.single_listen(service_id)
+        await self._single_listen(service_id)
 
         #Start Block Command
         command = [ 0X09, 0X01, num_bytes & 0XFF, num_bytes>>8 & 0XFF, 16 ]
 
         self._send_command(service_id, command, True)
-        await self.single_listen(service_id)
+        await self._single_listen(service_id)
 
         # Save Factory Calibration Parameters
         for m_id, m in self._sensor_measurements[channel_id].items():
@@ -971,6 +952,7 @@ class PASCOBLEDevice():
                 m['FactoryCalParams'] = self._factory_cal_params[i]
 
         self._factory_cal_params = {}
+
 
     class Error(Exception):
         """Base class for other exceptions"""
@@ -997,4 +979,8 @@ class PASCOBLEDevice():
 
     class InvalidParameter(Exception):
         """An invalid parameter was passed in"""
+        pass
+
+    class InvalidEquation(Exception):
+        """Could not calculate the measurement"""
         pass

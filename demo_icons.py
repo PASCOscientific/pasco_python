@@ -1,6 +1,6 @@
 import time
 
-from pasco_ble import PASCOBLEDevice
+from pasco_py_beta import PASCOBLEDevice
 #from character_library import Icons
 import character_library
 
@@ -10,6 +10,8 @@ def main():
     device = PASCOBLEDevice('//code.Node',0)
 
     while True:
+        device.code_node_show_icon(character_library.Icons().smile)
+        time.sleep(1)
         device.code_node_show_icon(character_library.Icons().smile)
         time.sleep(1)
         device.code_node_show_icon(character_library.Icons().surprise)

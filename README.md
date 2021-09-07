@@ -17,18 +17,50 @@ Import the `PASCOBLEDevice` object from the pasco_ble file into your project fil
 
 ---
 
+### Device Structure ###
+Device: A single PASCO Bluetooth device/sensor
+Sensor: A device can have multiple sensors
+Measurements: A sensor can have multiple measurements
+
+**Example**
+
+A Wireless Weather Sensor would be a "device".
+The "device" has 4 sensors  
+`['WirelessWeatherSensor', 'WirelessGPSSensor', 'WirelessLightSensor', 'WirelessCompass']`
+
+Each "sensor" can have multiple measurements  
+- WirelessWeatherSensor
+: `['Temperature', 'RelativeHumidity', 'AbsoluteHumidity', 'BarometricPressure', 'WindSpeed', 'DewPoint', 'WindChill', 'Humidex']`
+- WirelessGPSSensor
+: `['SatelliteCount', 'Latitude', 'Longitude', 'Altitude', 'Speed']`
+- WirelessLightSensor: `['UVIndex', 'Illuminance', 'SolarIrradiance', 'SolarPAR']`
+- WirelessCompass: `['WindDirection', 'MagneticHeading', 'TrueHeading']`
+
+
 ### Available Commands ###
-`device = PASCOBLEDevice()` Create bluetooth sensor object  
+`device = PASCOBLEDevice()` Create a Bluetooth device object  
 `device.scan()` Scan for available bluetooth devices. Returns a list of available devices  
 `device.connect()` Connect to a device using the name returned from the scan command.  
-`device.potential_values()` Get a list of available variable names for the sensor  
-`device.value_of()` Get a single measurement value  
+`device.connect_by_id()` Connect to a device using the name returned from the scan command.  
+`device.disconnect()` Disconnect from a device  
+`device.is_connected` Returns true/false to tell device connection state  
+`device.get_sensor_list()` Get a list of sensors that a device has  
+`device.get_measurement_list()` Returns all the measurements that a device has  
+`device.read_data()` Get a single value from a single measurement  
+`device.read_data_list()` Get a list of values for multiple measurements  
+`device.get_measurement_unit()` Get a the default units for a single measurement  
+`device.get_measurement_unit_list()` Get a list of default units for multiple measurements  
 
 ---
 
 ### Step 1: Initiate an object for the sensor ###
 
 `my_sensor = PASCOBLEDevice()`
+
+If you know the device's 6-digit serial ID (printed on the device) you can quickly scan and connect using the command:  
+`my_sensor.connect_by_id('111-123')`
+
+Otherwise perform Steps 2 & 3 to scan/connect.
 
 
 ### Step 2: Scan for available bluetooth (BLE) sensors ###
@@ -42,15 +74,17 @@ How to use:
 
 ### Step 3: Connect to a BLE sensor found from the scan ###
 
-Print a list of found devices (or use another option to browse the list)
+The scan command will return a list of found devices. Iterate through that list to determine which device you want to connect to.
+
+One way is to print the list and prompt the user like this:
 ```
 for i, ble_device in enumerate(found_devices):
-    display_name = ble_device.name.split('>')
-    print(f'{i}: {display_name[0]}')
-```
-Connect to one of the devices:   
-`my_sensor.connect(found_devices[0])`
+    print(f'{i}: {ble_device.name}')
 
+selected_device = input('Select a device: ') 
+my_sensor.connect(selected_device)
+
+```
 
 ### Example of how to scan/connect ###
 
@@ -71,62 +105,56 @@ my_sensor.connect(ble_device)
 ```
 
 
-### Step 4: Available sensor measurements ###
+### Step 4: View Device Sensor(s) ###
 
-If a sensor only has one measurement, like the Wireless Temperature Sensor, we will see:
-```
-Connected to Temperature 111-123
-WirelessTemperature (Temperature)
-```
-
-If a sensor has multiple measurements available you will be prompted to select which sensor measurements to activate. For example, if we try to connect to a Wireless Weather Sensor we will see:
-```
-Connected to Weather 222-345
-0: Weather (Temperature, RelativeHumidity, AbsoluteHumidity, BarometricPressure, WindSpeed, DewPoint, WindChill, Humidex)
-1: GPS (SatelliteCount, Latitude, Longitude, Altitude, Speed)
-2: Light (UVIndex, Illuminance, SolarIrradiance, SolarPAR)
-3: Compass (WindDirection, MagneticHeading, TrueHeading)
-a: All
-Enter [default: a]:
-```
-
-The values inside the paranthesis during the device measurement selection represent the measurement variable names (used in Step 5).
-
-The down side of selecting all is that it will be a greater burden on the battery.
+A device can have one or more on-board sensors. To view the list of sensors use the command `my_sensor.get_sensor_list()`. This returns a list of sensor names that a device has.
 
 
-#### Connect to a sensor programatically ####
+### Step 5: View Device Measurement(s) ###
 
-There are a few ways to quickly connect to the sensor. You can use the sensor name found in the scan *or* the 6 digit ID#. This will scan and connect to the sensor automatically. If multiple sensors with the same name are found, you will be prompted to select one.
+Each sensor can have one or more measurements. If you want to view all the measurements that a device has, use the command `my_sensor.get_measurement_list()`.  
 
-Examples:  
-`my_temp_sensor = PASCOBLEDevice('Temperature') # Looks for any available Temperature sensors`  
-`my_weather_sensor = PASCOBLEDevice('Weather') # Looks for any available Weather sensor`  
-`my_temp_sensor = PASCOBLEDevice('111-123') # Look for any sensor with this unique ID`  
-`my_weather_sensor = PASCOBLEDevice('222-345') # Look for any sensor with this unique ID`  
-
-If you know you want to read JUST the Light measurements from the Weather sensor we can use one of these methods:  
-`my_weather_sensor = PASCOBLEDevice('Weather', 2)`  
-`my_weather_sensor = PASCOBLEDevice('222-345', 2)`  
-
-If we want the Weather and Light measurements from the weather sensor we can connect these ways:  
-`my_weather_sensor = PASCOBLEDevice('Weather', '0,2')`  
-`my_weather_sensor = PASCOBLEDevice('222-345', '0,2')`
+To view only the measurements that a sensor has, use the sensor name (from the list in Step 4) like this `my_sensor.get_measurement_list('WirelessWeatherSensor')`.
 
 
-### Step 5: Reading data from a sensor ###
+### Step 6: Start collecting data! ###
 
 The measurement variable names come from Step 4
 
 To read the `Temperature`  
-`my_temperature_sensor.value_of('Temperature')`  
+`my_temperature_sensor.read_data('Temperature')`  
 
 To read the `RelativeHumidity`  
-`my_weather_sensor.value_of('RelativeHumidity')`
+`my_weather_sensor.read_data('RelativeHumidity')`
+
+To read a list of measurements  
+`my_weather_sensor.read_data_list(['Temperature','RelativeHumidity'])`
+
+To get the units for a measurement  
+`my_temperature_sensor.get_measurement_unit('Temperature')`
+
+To get the units for a list of measurements  
+`my_weather_sensor.get_measurement_unit_list(['Temperature','RelativeHumidity'])`
 
 ---
 
 ## /\/code.Node Specific Commands ##
+
+In order to connect to a /\/code.Node we must import the `CodeNodeDevice` object and (optionally) the character library which allows a user to display text on the 5x5 LED Array.
+
+```
+from code_node_device import CodeNodeDevice
+import character_library
+```
+`my_code_node = CodeNodeDevice()` Create /\/code.Node Bluetooth device object  
+`my_code_node.set_led_in_array()` Set an individual LED in the 5x5 LED Array  
+`my_code_node.set_leds_in_array()` Set multiple LEDs in the 5x5 LED Array  
+`my_code_node.set_rgb_led()` Set the RGB LED  
+`my_code_node.set_sound_frequency()` Set the speaker frequency  
+`my_code_node.scroll_text_in_array` Scroll text on the 5x5 LED Array  
+`my_code_node.show_image_in_array()` Display an image in the 5x5 LED Array  
+`my_code_node.reset()` Reset all of the /\/code.Node outputs  
+
 
 ### Set LEDs on the 5x5 Display ###
 
@@ -139,49 +167,65 @@ x, y coordinates on the //code.Node 5x5 LED display
 | 0,3  1,3  2,3  3,3  4,3 |
 | 0,4  1,4  2,4  3,4  4,4 |
 ---------------------------
-intensity range is 0-10
+intensity range is 0-255
 ```
 
 #### Set one LED  ####
 
-`code_node_device.code_node_set_led(x, y, intensity)`  
-Example: `code_node_device.code_node_set_led(2, 0, 10)` will turn the top center LED on at max brightness
+`code_node_device.set_led_in_array(x, y, intensity)`  
+Example: `code_node_device.set_led_in_array(2, 0, 255)` will turn the top center LED on at max brightness
 
 
 #### Set multiple LEDs at once ####
 
-`code_node_device.code_node_set_leds(led_array, intensity)`  
-An example of an `led_array` is `[[4,4], [0,4], [2,2]]`
+`code_node_device.set_leds_in_array(led_array, intensity)`
 
+```
+led_array = [[4,4], [0,4], [2,2]]
+code_node_device.set_leds_in_array(led_array, 128)
+```
 
 ### Set the RGB LED ###
 
-`code_node_device.code_node_set_rgb_leds(r, g, b)`  
-`r`, `g`, `b` indicate brightness ranges between 0 and 10.
+`code_node_device.set_rgb_led(r, g, b)`  
+`r`, `g`, `b` indicate brightness ranges between 0 and 255.
 
+```
+r = 20
+g = 100
+b = 200
+code_node_device.set_rgb_led(r, g, b)
+```
 
 ### Turn the speaker on/off ###
 
-`code_node_device.code_node_set_sound_frequency(frequency)`  
+`code_node_device.set_sound_frequency(frequency)`  
 Send `frequency` in Hz
 
 
-### Reset the code_node outputs ###
+### Scroll Text on the 5x5 LED Array ###
 
-`code_node_device.code_node_reset()`  
-Turn the 5x5 LED display, RGB LED off and speaker off.
+`code_node_device.scroll_text_in_array(text_string)`  
+This will scroll the text on the /\/code.Node's display
+
+```
+code_node_device.scroll_text_in_array('Hello World')
+```
 
 ### The character library ###
 
+`code_node_device.show_image_in_array(character_library.Icons().smile)`  
+If we import the `character_library` to our project we can show unique images on the display. Refer to the library file to see available options. Examples:
 
-#### Scroll Text ####
+```
+code_node_device.show_image_in_array(character_library.Icons().smile)
+code_node_device.show_image_in_array(character_library.Icons().heart)
+```
 
-`code_node_device.code_node_scroll_text(string_to_scroll)`  
-Scroll text on the 5x5 LED display. Requires importing the `character_library` to the project.
+### Reset the code_node outputs ###
 
-#### Display Icons ####
-`code_node_device.code_node_show_icon(icon_name)`  
-Show an icon on the 5x5 LED Display. Requires importing the `character_library` to the project. Refer to the library file to see available options.
+`code_node_device.reset()`  
+Turn the 5x5 LED display, RGB LED off and speaker off.
 
 ---
 
