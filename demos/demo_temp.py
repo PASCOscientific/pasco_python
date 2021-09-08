@@ -1,8 +1,6 @@
-from code_node_device import CodeNodeDevice
-import character_library
-
-from pasco_ble_device import PASCOBLEDevice
-from code_node_device import CodeNodeDevice
+from paspy.character_library import Icons
+from paspy.code_node_device import CodeNodeDevice
+from paspy.pasco_ble_device import PASCOBLEDevice
 
 
 def main():

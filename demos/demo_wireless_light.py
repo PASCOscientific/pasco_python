@@ -1,7 +1,7 @@
-import character_library
+from paspy.character_library import Icons
 
-from code_node_device import CodeNodeDevice
-from pasco_ble_device import PASCOBLEDevice
+from paspy.code_node_device import CodeNodeDevice
+from paspy.pasco_ble_device import PASCOBLEDevice
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
             if light_on == False:
                 pCodeNode.code_node_set_rgb_leds(5,5,5)
                 pCodeNode.code_node_set_sound_frequency(200)
-                pCodeNode.show_image_in_array(character_library.Icons().smile)
+                pCodeNode.show_image_in_array(Icons().smile)
                 light_on = True
             else:
                 pCodeNode.code_node_reset()

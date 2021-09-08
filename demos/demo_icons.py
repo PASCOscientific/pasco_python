@@ -1,8 +1,7 @@
 import time
 
-from pasco_ble_device import PASCOBLEDevice
-#from character_library import Icons
-import character_library
+from paspy.character_library import Icons
+from paspy.pasco_ble_device import PASCOBLEDevice
 
 def main():
 
@@ -10,33 +9,33 @@ def main():
     device = PASCOBLEDevice('//code.Node',0)
 
     while True:
-        device.code_node_show_icon(character_library.Icons().smile)
+        device.code_node_show_icon(Icons().smile)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().smile)
+        device.code_node_show_icon(Icons().sad)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().surprise)
+        device.code_node_show_icon(Icons().surprise)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_top)
+        device.code_node_show_icon(Icons().arrow_top)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_topright)
+        device.code_node_show_icon(Icons().arrow_topright)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_right)
+        device.code_node_show_icon(Icons().arrow_right)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_bottomright)
+        device.code_node_show_icon(Icons().arrow_bottomright)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_bottom)
+        device.code_node_show_icon(Icons().arrow_bottom)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_bottomleft)
+        device.code_node_show_icon(Icons().arrow_bottomleft)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_left)
+        device.code_node_show_icon(Icons().arrow_left)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().arrow_topleft)
+        device.code_node_show_icon(Icons().arrow_topleft)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().heart)
+        device.code_node_show_icon(Icons().heart)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().heart_sm)
+        device.code_node_show_icon(Icons().heart_sm)
         time.sleep(1)
-        device.code_node_show_icon(character_library.Icons().alien)
+        device.code_node_show_icon(Icons().alien)
         time.sleep(1)
 
 if __name__ == "__main__":

@@ -1,28 +1,26 @@
-import character_library
-
-from code_node_device import CodeNodeDevice
-from pasco_ble_device import PASCOBLEDevice
+from paspy.code_node_device import CodeNodeDevice
+from paspy.pasco_ble_device import PASCOBLEDevice
+from paspy.character_library import Icons
 
 
 def main():
     # Connect to PASCO Device
-    pCodeNode = CodeNodeDevice()
-    pCodeNode.connect_by_id('020-122')
-    #pForce = PASCOBLEDevice('Force')
+    p_code_node = CodeNodeDevice()
+    p_code_node.connect_by_id('020-122')
 
-    pCodeNode.reset()
+    p_code_node.reset()
     light_on = False
 
     while True:
         if light_on == False:
-            pCodeNode.set_rgb_led(100,100,100)
-            #pCodeNode.set_sound_frequency(200)
-            #pCodeNode.scroll_text_in_array("HELLO")
-            pCodeNode.show_image_in_array(character_library.Icons().smile)
-            pCodeNode.show_image_in_array(character_library.Icons().sad)
+            p_code_node.set_rgb_led(100,100,100)
+            p_code_node.set_sound_frequency(200)
+            p_code_node.scroll_text_in_array("HELLO")
+            p_code_node.show_image_in_array(Icons().smile)
+            p_code_node.show_image_in_array(Icons().sad)
             light_on = True
         else:
-            pCodeNode.reset()
+            p_code_node.reset()
             light_on = False
 
 

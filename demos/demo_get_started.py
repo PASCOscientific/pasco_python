@@ -1,7 +1,6 @@
-from pasco_ble_device import PASCOBLEDevice
-from bleak.backends.device import BLEDevice
+from paspy.pasco_ble_device import PASCOBLEDevice
 import time
-import asyncio
+
 
 def main():
 

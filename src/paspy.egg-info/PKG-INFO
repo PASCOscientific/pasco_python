@@ -1,3 +1,21 @@
+Metadata-Version: 2.1
+Name: paspy
+Version: 0.1.0b0
+Summary: PASCO Python API for Wireless Sensors
+Home-page: UNKNOWN
+Author: Waqas Saeed
+Author-email: wsaeed@pasco.com
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3.7
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: Unix
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 # README #
 
 This library allows PASCO Wireless sensors to work with Python
@@ -349,3 +367,5 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+
