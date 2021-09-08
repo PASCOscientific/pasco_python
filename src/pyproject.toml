@@ -1,0 +1,3 @@
+[build-system]
+requires = ["bleak"]
+build-backend = "setuptools.build_meta"

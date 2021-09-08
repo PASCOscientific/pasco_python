@@ -7,7 +7,9 @@ This library allows PASCO Wireless sensors to work with Python
 * PASCO Python Library
 * Version 0.1
 
-## How do I get starged? ##
+---
+
+## How do I get started? ##
 
 ```
 pip install paspy
@@ -19,9 +21,9 @@ from pasco_ble_device import PASCOBLEDevice
 from code_node_device import CodeNodeDevice
 ```
 
-## Connecting to a sensor ##
-
 ---
+
+## Connecting to a sensor ##
 
 ### Device Structure ###
 Device: A physical PASCO wireless sensor will be called a device  
