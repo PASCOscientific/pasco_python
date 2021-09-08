@@ -1,7 +1,7 @@
 import character_library
 
 from code_node_device import CodeNodeDevice
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 
 
 def main():

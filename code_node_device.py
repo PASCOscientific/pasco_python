@@ -1,5 +1,5 @@
 import character_library
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 
 
 class CodeNodeDevice(PASCOBLEDevice):

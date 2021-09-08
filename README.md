@@ -7,20 +7,26 @@ This library allows PASCO Wireless sensors to work with Python
 * PASCO Python Library
 * Version 0.1
 
-## How do I get set up? ##
+## How do I get starged? ##
 
-Copy the library or at the minimum, the `pasco_ble.py` and `datasheets.xml` files.
+```
+pip install paspy
+```
 
-Import the `PASCOBLEDevice` object from the pasco_ble file into your project file.
+In your project file, import the device class and/or the code node device class
+```
+from pasco_ble_device import PASCOBLEDevice
+from code_node_device import CodeNodeDevice
+```
 
 ## Connecting to a sensor ##
 
 ---
 
 ### Device Structure ###
-Device: A single PASCO Bluetooth device/sensor
-Sensor: A device can have multiple sensors
-Measurements: A sensor can have multiple measurements
+Device: A physical PASCO wireless sensor will be called a device  
+Sensor: A device can have multiple sensors built in  
+Measurements: A sensor can offer multiple measurements  
 
 **Example**
 
@@ -38,15 +44,15 @@ Each "sensor" can have multiple measurements
 ### Available Commands ###
 `device = PASCOBLEDevice()` Create a Bluetooth device object  
 `device.scan()` Scan for available bluetooth devices. Returns a list of available devices  
-`device.connect()` Connect to a device using the name returned from the scan command.  
+`device.connect()` Connect to a device using the object returned from the scan command.  
 `device.connect_by_id()` Connect to a device using the name returned from the scan command.  
 `device.disconnect()` Disconnect from a device  
 `device.is_connected` Returns true/false to tell device connection state  
 `device.get_sensor_list()` Get a list of sensors that a device has  
 `device.get_measurement_list()` Returns all the measurements that a device has  
-`device.read_data()` Get a single value from a single measurement  
-`device.read_data_list()` Get a list of values for multiple measurements  
-`device.get_measurement_unit()` Get a the default units for a single measurement  
+`device.read_data()` Get a single reading from a single measurement  
+`device.read_data_list()` Get a list of readings for multiple measurements  
+`device.get_measurement_unit()` Get the default units for a single measurement  
 `device.get_measurement_unit_list()` Get a list of default units for multiple measurements  
 
 ---
@@ -236,8 +242,9 @@ Turn the 5x5 LED display, RGB LED off and speaker off.
 ### Example 1: ###
 
 Connect to a Wireless Temperature Sensor and get one reading:
+
 ```
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 
 def main():
     my_temp_sensor = PASCOBLEDevice()
@@ -257,7 +264,7 @@ if __name__ == "__main__":
 Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement so we don't want to specify a device. We want to constantly read and display the result.
 
 ```
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 
 def main():
     my_sensor = PASCOBLEDevice()
@@ -288,10 +295,9 @@ if __name__ == "__main__":
 We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
 
 ```
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 from code_node_device import CodeNodeDevice
 import character_library
-
 
 def main():
 

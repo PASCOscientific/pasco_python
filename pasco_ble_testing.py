@@ -1,4 +1,5 @@
 import asyncio
+import character_library
 import dweepy
 import math
 import os
@@ -7,12 +8,9 @@ import requests
 import time
 import xml.etree.ElementTree as ET
 
-import character_library
-
 from bleak import BleakClient, discover
 from uuid import UUID
 
-# TODO: What happens if we try to connect twice?
 
 class PASCOBLEDevice():
     """

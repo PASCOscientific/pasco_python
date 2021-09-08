@@ -1,4 +1,4 @@
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 from bleak.backends.device import BLEDevice
 import time
 import asyncio

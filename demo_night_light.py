@@ -1,4 +1,4 @@
-from pasco_ble import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 
 def main():
 

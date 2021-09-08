@@ -1,6 +1,6 @@
 import time
 
-from pasco_py_beta import PASCOBLEDevice
+from pasco_ble_device import PASCOBLEDevice
 #from character_library import Icons
 import character_library
 
