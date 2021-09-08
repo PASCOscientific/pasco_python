@@ -103,7 +103,7 @@ class CodeNodeDevice(PASCOBLEDevice):
 
 
     def scroll_text_in_array(self, text):
-        matrix = character_library.get_word(text)
+        matrix = character_library.get_word(text.upper())
         #print(matrix)
         for disp in matrix:
             self.set_leds_in_array(disp, 128)

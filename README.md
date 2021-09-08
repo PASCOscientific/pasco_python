@@ -29,10 +29,8 @@ The "device" has 4 sensors
 `['WirelessWeatherSensor', 'WirelessGPSSensor', 'WirelessLightSensor', 'WirelessCompass']`
 
 Each "sensor" can have multiple measurements  
-- WirelessWeatherSensor
-: `['Temperature', 'RelativeHumidity', 'AbsoluteHumidity', 'BarometricPressure', 'WindSpeed', 'DewPoint', 'WindChill', 'Humidex']`
-- WirelessGPSSensor
-: `['SatelliteCount', 'Latitude', 'Longitude', 'Altitude', 'Speed']`
+- WirelessWeatherSensor: `['Temperature', 'RelativeHumidity', 'AbsoluteHumidity', 'BarometricPressure', 'WindSpeed', 'DewPoint', 'WindChill', 'Humidex']`
+- WirelessGPSSensor: `['SatelliteCount', 'Latitude', 'Longitude', 'Altitude', 'Speed']`
 - WirelessLightSensor: `['UVIndex', 'Illuminance', 'SolarIrradiance', 'SolarPAR']`
 - WirelessCompass: `['WindDirection', 'MagneticHeading', 'TrueHeading']`
 
@@ -200,16 +198,20 @@ code_node_device.set_rgb_led(r, g, b)
 ### Turn the speaker on/off ###
 
 `code_node_device.set_sound_frequency(frequency)`  
-Send `frequency` in Hz
+Send `frequency` (int) in Hz
+
+```
+code_node_device.set_sound_frequency(440)
+```
 
 
 ### Scroll Text on the 5x5 LED Array ###
 
-`code_node_device.scroll_text_in_array(text_string)`  
+`code_node_device.scroll_text_in_array(text)`  
 This will scroll the text on the /\/code.Node's display
 
 ```
-code_node_device.scroll_text_in_array('Hello World')
+code_node_device.scroll_text_in_array('HELLO WORLD')
 ```
 
 ### The character library ###
