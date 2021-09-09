@@ -11,10 +11,9 @@ def main():
     p_code_node.reset()
     light_on = False
 
-    while True:
-        if light_on == False:
-            p_code_node.set_rgb_led(100,100,100)
-            p_code_node.set_sound_frequency(200)
+    while not p_code_node.read_data('Button1'):
+        if not light_on:
+            p_code_node.set_rgb_led(100, 100, 100)
             p_code_node.scroll_text_in_array("HELLO")
             p_code_node.show_image_in_array(Icons().smile)
             p_code_node.show_image_in_array(Icons().sad)
@@ -23,6 +22,9 @@ def main():
             p_code_node.reset()
             light_on = False
 
+    p_code_node.set_sound_frequency(600)
+    p_code_node.set_sound_frequency(300)
+    p_code_node.reset()
 
 if __name__ == "__main__":
     main()
