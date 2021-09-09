@@ -205,6 +205,7 @@ class PASCOBLEDevice():
 
             try:
                 self._loop.run_until_complete(self._async_connect())
+                self.keepalive()
             except ConnectionError:
                 exit(1)
             else:
@@ -227,15 +228,7 @@ class PASCOBLEDevice():
             found_devices = self.scan(pasco_device_id)
             ble_device = found_devices[0]
 
-            self._client = BleakClient(ble_device.address)
-
-            try:
-                self._loop.run_until_complete(self._async_connect())
-            except ConnectionError:
-                exit(1)
-            else:
-                self._set_device_params(ble_device)
-                self._loop.run_until_complete(self._initialize_sensor_values())
+            self.connect(ble_device)
         else:
             raise self.BLEAlreadyConnectedError()
 

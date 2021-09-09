@@ -8,11 +8,11 @@ def main():
     p_code_node = CodeNodeDevice()
     p_code_node.connect_by_id('020-122')
 
-    p_code_node.reset()
+    #p_code_node.reset()
     light_on = False
 
-    while not p_code_node.read_data('Button1'):
-        if not light_on:
+    while True:
+        if input('What?') == '1':
             p_code_node.set_rgb_led(100, 100, 100)
             p_code_node.scroll_text_in_array("HELLO")
             p_code_node.show_image_in_array(Icons().smile)
