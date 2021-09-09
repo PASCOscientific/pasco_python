@@ -1,5 +1,5 @@
-import character_library
-from pasco_ble_device import PASCOBLEDevice
+from .character_library import get_icon, get_word
+from .pasco_ble_device import PASCOBLEDevice
 
 
 class CodeNodeDevice(PASCOBLEDevice):
@@ -103,14 +103,14 @@ class CodeNodeDevice(PASCOBLEDevice):
 
 
     def scroll_text_in_array(self, text):
-        matrix = character_library.get_word(text.upper())
+        matrix = get_word(text.upper())
         #print(matrix)
         for disp in matrix:
             self.set_leds_in_array(disp, 128)
 
 
     def show_image_in_array(self, image):
-        matrix = character_library.get_icon(image)
+        matrix = get_icon(image)
         #print(matrix)
         self.set_leds_in_array(matrix, 128)
 
