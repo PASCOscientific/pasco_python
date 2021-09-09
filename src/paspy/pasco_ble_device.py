@@ -1,5 +1,6 @@
 import asyncio
 import math
+import os
 import re
 import xml.etree.ElementTree as ET
 
@@ -55,7 +56,9 @@ class PASCOBLEDevice():
         self._measurement_sensor_ids = {}
 
         # Load Datasheet
-        tree = ET.parse('datasheets.xml')
+        package_path = os.path.dirname(os.path.abspath(__file__))
+        datasheet_path = os.path.join(package_path, 'datasheets.xml')
+        tree = ET.parse(datasheet_path)
         self._xml_root = tree.getroot()
 
         self._compatible_devices = [
