@@ -25,7 +25,7 @@ def main():
             code_node_device.set_rgb_led(100,100,100)
             code_node_device.set_sound_frequency(200)
             code_node_device.scroll_text_in_array('Hello World')
-            code_node_device.show_image_in_array(character_library.Icons().alien)
+            code_node_device.show_image_in_array(Icons().alien)
             light_on = True
         else:
             code_node_device.reset()
