@@ -2,6 +2,7 @@ import asyncio
 import math
 import os
 import re
+import time
 import xml.etree.ElementTree as ET
 
 from bleak import BleakClient, discover
@@ -46,11 +47,12 @@ class PASCOBLEDevice():
         self._device_measurements = []
         self._handle_service = {}
         self._data_stack = {}
-        self._single_measurement = []
+        self._single_measurement_packet = []
         self._sensor_measurements = {}
         self._factory_cal_params = {}
         self._sensor_data = {}
         self._sensor_data_prev = {}
+        self._dropcount = 0
 
         self._data_results = {}
         self._measurement_sensor_ids = {}
@@ -404,7 +406,7 @@ class PASCOBLEDevice():
         #print(bleWrite)
 
         try:
-            self._loop.create_task(self._async_write(uuid, command, wait_for_response))
+            self._loop.run_until_complete(self._async_write(uuid, command, wait_for_response))
         except:
             print('ERROR: BLE write failed')
             return False
@@ -429,7 +431,7 @@ class PASCOBLEDevice():
         #print(bleWrite)
 
         try:
-            self._loop.create_task(self._async_write(uuid, command, wait_for_response=False))
+            self._loop.run_until_complete(self._async_write(uuid, command, wait_for_response=False))
         except:
             print('ERROR: BLE write failed')
             return False
@@ -438,7 +440,7 @@ class PASCOBLEDevice():
 
 
     async def _async_write(self, uuid, data_to_write, wait_for_response):
-        await self._client.write_gatt_char(uuid, data_to_write, wait_for_response)
+        await self._client.write_gatt_char(uuid, bytes(data_to_write), wait_for_response)
 
 
     async def _initialize_sensor_values(self):
@@ -458,18 +460,6 @@ class PASCOBLEDevice():
                 }
                 for c in interface.findall("./Channel")
             ]
-            """
-            device_sensors_class = [
-                {
-                    id = int(c.get('ID')),
-                    sensor_id = int(c.get('SensorID')) if 'SensorID' in c.attrib else '',
-                    name = c.get('NameTag'),
-                    type = c.get('Type'),
-                    output_type = c.get('OutputType') if 'OutputType' in c.attrib else ''
-                }
-                for c in interface.findall("./Channel")
-            ]
-            """
             
             for sensor in device_sensors:
                 sensor_data = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % str(sensor['sensor_id']))
@@ -499,12 +489,17 @@ class PASCOBLEDevice():
                             sensor['total_data_size'] += sensor_m['DataSize']
                         if 'Inputs' in sensor_m and sensor_m['Inputs'].isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
                         if 'Precision' in sensor_m and sensor_m['Precision'].isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
-                        #if m['Type'] == 'FactoryCal':
-                            # await self.read_factory_cal(sensor.id)
+                        # if sensor_m['Type'] == 'FactoryCal':
+                            # await self.read_factory_cal(sensor['id'])
                             # Do Factory Cal reading here
                         #TODO: This is a temporary workaround for the code node cart
                         if sensor_m['NameTag'] == "RawCartPosition":
                             sensor_m['DataSize'] = 0
+
+                    # TODO: Factory Calibration
+                    #await self.read_factory_cal(sensor['id'])
+
+                    #print('got the cal')
 
                     # Initialize internal sensor measurement values
                     self._sensor_data[sensor['id']] = { m_id: None for m_id in self._sensor_measurements[sensor['id']] }
@@ -655,6 +650,7 @@ class PASCOBLEDevice():
     async def _single_listen(self, service_id):
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
+        await self._client.stop_notify(uuid)
 
 
     async def _notify_callback(self, handle, value):
@@ -691,9 +687,9 @@ class PASCOBLEDevice():
             # Received single data packet
             elif (value[0] is self.GRSP_RESULT):
                 # Valid data 
-                if value[1] is 0x00:
+                if value[1] == 0x00:
                     if value[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._single_measurement = value[3:]
+                        self._single_measurement_packet = value[3:]
                     elif value[2] == 1: #SPI Data (ex: AirLink Interface connected)
                         pasport_service_id = 1
                         self._send_command(pasport_service_id, [ 0x08 ], True)
@@ -701,7 +697,7 @@ class PASCOBLEDevice():
                         #TODO: AirLink things
 
                 # Error receiving data
-                elif value[1] is 0x01:
+                elif value[1] == 0x01:
                     print(f'Error on channel # {channel_id}')
 
             elif (value[0] == self.GEVT_SENSOR_ID):
@@ -712,12 +708,12 @@ class PASCOBLEDevice():
             # Received single data packet
             if (value[0] is self.GRSP_RESULT):
                 # Valid data 
-                if value[1] is 0x00:
+                if value[1] == 0x00:
                     if value[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._single_measurement = value[3:]
+                        self._single_measurement_packet = value[3:]
 
             # Get factory calibration
-            elif (value[0] is 0x0A):
+            elif (value[0] == 0x0A):
                 self._factory_cal_params[value[1]] = []
                 num_params = 4
                 byte_len = 4
@@ -730,7 +726,10 @@ class PASCOBLEDevice():
 
                     self._factory_cal_params[value[1]].append(float(self._binary_float(byte_value, byte_len)))
             
-            elif (value[0] is 0x0B):
+                print('---factoryparams---')
+                print(self._factory_cal_params)
+
+            elif (value[0] == 0x0B):
                 pass
             #print(handle)
 
@@ -744,27 +743,29 @@ class PASCOBLEDevice():
 
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
-        self._send_command(service_id, one_shot_cmd, True)
+        self._send_command(service_id, one_shot_cmd, False)
         self.loop.run_until_complete(self._single_listen(service_id))
 
-        self._data_stack[sensor_id] = self._single_measurement
+        self._data_stack[sensor_id] = self._single_measurement_packet
         self.loop.run_until_complete(self._decode_data(sensor_id))
 
 
     async def _decode_data(self, sensor_id):
         try:
             # Save and reset current data dictionary
-            self._sensor_data_prev = self._sensor_data.copy()
+            self._sensor_data_prev[sensor_id] = self._sensor_data[sensor_id].copy()
             self._sensor_data[sensor_id] = { m_id: None for m_id in self._sensor_measurements[sensor_id] }
+
             for m_id, raw_m in self._sensor_measurements[sensor_id].items():
                 result_value = None
 
                 if raw_m['Type'] == 'RawDigital':
-                    result_value = 0
+                    byte_value = 0
                     for d in range(raw_m['DataSize']):
                         if len(self._data_stack[sensor_id]):
                             stack_value = self._data_stack[sensor_id].pop(0)
-                            result_value += stack_value * (2**(8*d))
+                            byte_value += stack_value * (2**(8*d))
+                            result_value = byte_value
 
                     if (raw_m['DataSize'] == 4 or ('TwosComp' in raw_m and int(raw_m['TwosComp']) == 1)):
                         result_value = self._twos_comp(result_value, raw_m['DataSize'])
@@ -816,15 +817,23 @@ class PASCOBLEDevice():
 
         except:
             print(m)
-            print('Error: Could not get the measurement value')
+            print('Error: Could not decode the data')
 
 
     def _get_measurement_value(self, channel_id, measurement_id):
         m = self._sensor_measurements[channel_id][measurement_id]
         result_value = None
+        input_value = None
+
+        #print(self._sensor_data[channel_id])
+
+        if m['Type'] == 'RawDigital' and self._sensor_data[channel_id][measurement_id] == None:
+            #print('the raw is not there')
+            pass
 
         if 'Inputs' in m:
             # Multiple Input
+            ##print(m)
             if m['Type'] == 'ThreeInputVector':
                 inputs = m['Inputs'].split(',')
                 missing_param = False
@@ -837,39 +846,50 @@ class PASCOBLEDevice():
                     ay = self._sensor_data[channel_id][int(inputs[1])]
                     az = self._sensor_data[channel_id][int(inputs[2])]
                     result_value = math.sqrt(ax**2 + ay**2 + az**2)
-            elif m['Type'] == 'Select':
+            elif m['Type'] == 'Select': # For Current, Voltage and Accel
                 inputs = m['Inputs'].split(',')
-                result_value = self._sensor_data[channel_id][int(inputs[1])]
+
+                need_input = int(inputs[0])
+
+                if self._sensor_data[channel_id][need_input] is not None:
+                    result_value = self._sensor_data[channel_id][need_input]
+                else:
+                    result_value = self._get_measurement_value(channel_id, need_input)
+
             # Single Input
             else:
-                if self._sensor_data[channel_id][m['Inputs']] is not None:
-                    input_value = self._sensor_data[channel_id][m['Inputs']]
+                need_input = int(m['Inputs'])
+                if self._sensor_data[channel_id][need_input] is not None:
+                    input_value = self._sensor_data[channel_id][need_input]
                 else:
-                    input_value = self._get_measurement_value(channel_id, m['Inputs'])
+                    input_value = self._get_measurement_value(channel_id, need_input)
 
-        if m['Type'] == 'UserCal':
-            params = m['Params'].split(',')
-            result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
-
-        elif m['Type'] == 'FactoryCal':
-            if 'FactoryCalParams' in m and len(m['FactoryCalParams']) == 4:
-                params = m['FactoryCalParams']
-            else:
+        if (input_value is not None):
+            if m['Type'] == 'UserCal':
                 params = m['Params'].split(',')
-            result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
+                result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
 
-        elif m['Type'] == 'LinearConv':
-            params = m['Params'].split(',')
-            result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
+            elif m['Type'] == 'FactoryCal':
+                if 'FactoryCalParams' in m and len(m['FactoryCalParams']) == 4:
+                    params = m['FactoryCalParams']
+                else:
+                    params = m['Params'].split(',')
+                result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
 
-        elif m['Type'] == 'Derivative':
-            #Ignore for now - This is why we have the _sensor_data_prev object
-            return None
-            """
-            if self._sensor_data_prev[channel_id][m['Inputs']] != None:
-                prev_input_value = self._sensor_data_prev[channel_id][m['Inputs']]
-                result_value = (input_value - prev_input_value) / 2
-            """
+            elif m['Type'] == 'LinearConv':
+                params = m['Params'].split(',')
+                result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
+
+            elif m['Type'] == 'Derivative':
+                #Ignore for now - This is why we have the _sensor_data_prev object
+                #return None
+                if self._sensor_data_prev[channel_id][m['Inputs']] != None:
+                    prev_input_value = self._sensor_data_prev[channel_id][m['Inputs']]
+                    result_value = (input_value - prev_input_value) / 2
+            
+            elif m['Type'] == 'RotaryPos':
+                self._dropcount += input_value
+                result_value = self._dropcount
 
         if ('Equation' in m):
             raw_equation = m['Equation']
@@ -940,7 +960,7 @@ class PASCOBLEDevice():
 
             elif raw_equation.startswith('codenodepos'):
                 None
-                
+
             else:
                 try:
                     raw_equation = raw_equation.replace('sqrt', 'math.sqrt')
@@ -953,6 +973,7 @@ class PASCOBLEDevice():
                     # print(f"Unable to calculate equation: {raw_equation}")
                     raise self.InvalidEquation()
 
+        #print(f'Results: {result_value}')
         return result_value
 
 
@@ -960,42 +981,44 @@ class PASCOBLEDevice():
         """
         Read factory calibrations from sensor's built in memory
         """
+        print('getting factory cal')
         factory_cal_count = 0
 
         for m_id, m in self._sensor_measurements[channel_id].items():
             if m['Type'] == 'FactoryCal':
                 factory_cal_count += 1
-            #print(m)
+                #print(m)
 
-        # Transfer Block RAM Command
-        ll_read = 128
-        ll_storage = 3
-        ll = ll_read + ll_storage
+        if factory_cal_count > 0:
+            # Transfer Block RAM Command
+            ll_read = 128
+            ll_storage = 3
+            ll = ll_read + ll_storage
 
-        address = channel_id + 2
-        num_bytes = 16 * factory_cal_count
-        service_id = self.SENSOR_SERVICE_ID
-        
-        command = [ self.GCMD_XFER_BURST_RAM, ll,
-                    address & 0xFF, address>>8 & 0XFF, address>>16 & 0XFF, address>>24 & 0XFF,
-                    num_bytes & 0xFF, num_bytes>>8 & 0XFF ]
+            address = channel_id + 2
+            num_bytes = 16 * factory_cal_count
+            service_id = self.SENSOR_SERVICE_ID
+            
+            command = [ self.GCMD_XFER_BURST_RAM, ll,
+                        address & 0xFF, address>>8 & 0XFF, address>>16 & 0XFF, address>>24 & 0XFF,
+                        num_bytes & 0xFF, num_bytes>>8 & 0XFF ]
 
-        self._send_command(service_id, command, True)
-        await self._single_listen(service_id)
+            self._send_command(service_id, command, True)
+            #await self._single_listen(service_id)
 
-        #Start Block Command
-        command = [ 0X09, 0X01, num_bytes & 0XFF, num_bytes>>8 & 0XFF, 16 ]
+            #Start Block Command
+            command = [ 0X09, 0X01, num_bytes & 0XFF, num_bytes>>8 & 0XFF, 16 ]
 
-        self._send_command(service_id, command, True)
-        await self._single_listen(service_id)
+            self._send_command(service_id, command, True)
+            #await self._single_listen(service_id)
 
-        # Save Factory Calibration Parameters
-        for m_id, m in self._sensor_measurements[channel_id].items():
-            i = 0
-            if m['Type'] == 'FactoryCal':
-                m['FactoryCalParams'] = self._factory_cal_params[i]
+            # Save Factory Calibration Parameters
+            for m_id, m in self._sensor_measurements[channel_id].items():
+                i = 0
+                if m['Type'] == 'FactoryCal':
+                    m['FactoryCalParams'] = self._factory_cal_params[i]
 
-        self._factory_cal_params = {}
+            self._factory_cal_params = {}
 
 
     class Error(Exception):
@@ -1028,3 +1051,37 @@ class PASCOBLEDevice():
     class InvalidEquation(Exception):
         """Could not calculate the measurement"""
         pass
+
+
+def main():
+
+    pasco_device = PASCOBLEDevice()
+    found_devices = pasco_device.scan()
+
+    if found_devices:
+        for i, ble_device in enumerate(found_devices):
+            print(f'{i}: {ble_device.name}')
+        
+        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+        pasco_device.connect(found_devices[int(selected_device)])
+    else:
+        print("No Devices Found")
+        exit(1)
+
+    print(pasco_device.get_sensor_list())
+    print(pasco_device.get_measurement_list())
+
+    print(pasco_device.read_data('Temperature'))
+
+    while False:
+        value = pasco_device.read_data('Temperature')
+        print(f'Temp: {value}')
+        #value = pasco_device.read_data_list(['Position','Velocity','Acceleration'])
+        #print(f"Pos: {value['Position']} Vel: {value['Velocity']} Accel: {value['Acceleration']}")
+        time.sleep(1)
+        #rez = pasco_device.read_data_list(['Accelerationx','Accelerationy','Accelerationz'])
+        #print(f"X: {rez['Accelerationx']}, Y: {rez['Accelerationy']}, Z: {rez['Accelerationz']}")
+
+
+if __name__ == "__main__":
+    main()
