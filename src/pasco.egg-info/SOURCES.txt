@@ -1,0 +1,15 @@
+LICENSE
+MANIFEST.in
+README.md
+pyproject.toml
+setup.cfg
+src/pasco/__init__.py
+src/pasco/character_library.py
+src/pasco/code_node_device.py
+src/pasco/datasheets.xml
+src/pasco/pasco_ble_device.py
+src/pasco.egg-info/PKG-INFO
+src/pasco.egg-info/SOURCES.txt
+src/pasco.egg-info/dependency_links.txt
+src/pasco.egg-info/requires.txt
+src/pasco.egg-info/top_level.txt

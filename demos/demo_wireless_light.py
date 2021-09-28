@@ -1,7 +1,7 @@
-from paspy.character_library import Icons
+from pasco.character_library import Icons
 
-from paspy.code_node_device import CodeNodeDevice
-from paspy.pasco_ble_device import PASCOBLEDevice
+from pasco.code_node_device import CodeNodeDevice
+from pasco.pasco_ble_device import PASCOBLEDevice
 
 
 def main():

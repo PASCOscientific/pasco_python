@@ -1,6 +1,6 @@
 import requests
 
-from paspy.pasco_ble_device import PASCOBLEDevice
+from pasco.pasco_ble_device import PASCOBLEDevice
 
 
 def main():

@@ -1,7 +1,7 @@
 import time
 
-from paspy.character_library import Icons
-from paspy.pasco_ble_device import PASCOBLEDevice
+from pasco.character_library import Icons
+from pasco.pasco_ble_device import PASCOBLEDevice
 
 def main():
 

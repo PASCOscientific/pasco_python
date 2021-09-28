@@ -1,19 +1,42 @@
 Copyright (c) 2021 PASCO Scientific
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction for personal or educational use. Prior
-authorization from PASCO is required to publish, distribute, sublicense,
-and/or sell copies of the Software. Additionally, the user is subject to the
-following conditions:
+END USER LICENSE AGREEMENT FOR SOURCE CODE
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+IMPORTANT – READ THIS AGREEMENT BEFORE USING THE SOURCE CODE. DOWNLOADING
+OR USING THE SOURCE CODE INDICATES YOUR ACCEPTANCE OF THIS AGREEMENT.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+This End User License Agreement (“EULA”) is a legal agreement between you and
+PASCO scientific (“PASCO”), as the licensor of the source code (“Code”)
+including updates or modified Code provided to you by PASCO, whether stored on
+media or downloaded via any method.
+
+PASCO may add to, change, or remove any part, term, or condition of this EULA,
+including but not limited to as it applies to the Code at any time without
+prior notice or liability to you. Any such additions, changes, or removals
+shall apply as soon as they are posted. By continuing to use the Code after so
+posted, you are indicating your acceptance thereto.
+
+ELIGIBLE LICENSEES – CONDITIONS:
+
+The Code is available for use solely by Licensee for personal, non-commercial
+and educational uses only. Redistribution and use in source and binary forms,
+with or without modification, are permitted provided that the following
+conditions are met:
+
+1. Neither the name of the Source Code provider nor the names of its
+   contributors may be used to endorse or promote products derived from this
+   source code without specific prior written permission.
+2. Redistribution in any form must meet condition #1, and the following
+   disclaimer in the documentation and/or other materials provided with the
+   distribution:
+   THIS SOURCE CODE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+   PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+   OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+   OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+   ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

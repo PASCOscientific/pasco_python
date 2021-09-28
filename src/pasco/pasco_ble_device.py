@@ -27,6 +27,7 @@ class PASCOBLEDevice():
     GRSP_RESULT = 0XC0                      # Generic response packet
     GEVT_SENSOR_ID = 0x82                   # Get Sensor ID (for AirLink)
 
+    WIRELESS_RMS_START = [0X37, 0X01, 0X00]
 
     def __init__(self):
         """
@@ -52,6 +53,7 @@ class PASCOBLEDevice():
         self._factory_cal_params = {}
         self._sensor_data = {}
         self._sensor_data_prev = {}
+        self._rotary_pos_data = {}
         self._dropcount = 0
 
         self._data_results = {}
@@ -64,31 +66,31 @@ class PASCOBLEDevice():
         self._xml_root = tree.getroot()
 
         self._compatible_devices = [
-            'Accel Alt',
-            'Optical DO',
-            'Drop Counter',
-            'O2',
-            'Temperature',
-            'Mag Field',
-            'Rotary Motion',
-            'Motion',
-            'Weather',
-            'CO2',
-            'Smart Cart',
-            'pH',
-            'Light',
-            'Force Accel',
-            'Pressure',
-            'Conductivity',
-            'Voltage',
-            'Current',
-            'BP',
-            'Load Cell',
-            'Diffraction',
             '//code.Node',
+            'Accel Alt',
+            'CO2',
+            'Conductivity',
+            'Current',
+            'Diffraction',
+            'Drop Counter',
+            'Force Accel',
+            'Light',
+            'Load Cell',
+            'Mag Field',
+            'Motion',
+            'O2',
+            'Optical DO',
+            'pH',
+            'Pressure',
+            'Smart Cart',
+            'Temperature',
+            'Voltage',
+            'Weather',
         ]
         """
         self._not_compatible_devices = [
+            'BP',
+            'Rotary Motion',
             'Smart Gate',
             'Sound',
             'EKG',
@@ -212,6 +214,10 @@ class PASCOBLEDevice():
                 exit(1)
             else:
                 self._set_device_params(ble_device)
+
+                if (self._dev_type == "Rotary Motion"):
+                    self._send_command(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START, False)
+
                 self._loop.run_until_complete(self._initialize_sensor_values())
         else:
             raise self.BLEAlreadyConnectedError()
@@ -381,6 +387,9 @@ class PASCOBLEDevice():
         """
         return m * raw + b
 
+    def _calc_rotary_pos(self, count, x, r):
+        return (count * x) / r
+
 
     def _send_command(self, service_id, command, wait_for_response=False):
         """
@@ -495,6 +504,9 @@ class PASCOBLEDevice():
                         #TODO: This is a temporary workaround for the code node cart
                         if sensor_m['NameTag'] == "RawCartPosition":
                             sensor_m['DataSize'] = 0
+                        sensor_m['Value'] = sensor_m['Value'] if 'Value' in sensor_m else 0 if sensor_m['Type'] == 'RotaryPos' else None
+
+                        #print(sensor_m)
 
                     # TODO: Factory Calibration
                     #await self.read_factory_cal(sensor['id'])
@@ -502,7 +514,9 @@ class PASCOBLEDevice():
                     #print('got the cal')
 
                     # Initialize internal sensor measurement values
-                    self._sensor_data[sensor['id']] = { m_id: None for m_id in self._sensor_measurements[sensor['id']] }
+                    self._sensor_data[sensor['id']] = { m_id: m['Value'] for m_id, m in self._sensor_measurements[sensor['id']].items() }
+
+                    print(self._sensor_data)
             
             # Initialize device measurement values
             self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in device_sensors for measurement in sensor['measurements'] }
@@ -744,7 +758,9 @@ class PASCOBLEDevice():
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
         self._send_command(service_id, one_shot_cmd, False)
+        time.sleep(.1) # TODO: This delay allows us to wait for the response.
         self.loop.run_until_complete(self._single_listen(service_id))
+
 
         self._data_stack[sensor_id] = self._single_measurement_packet
         self.loop.run_until_complete(self._decode_data(sensor_id))
@@ -754,7 +770,7 @@ class PASCOBLEDevice():
         try:
             # Save and reset current data dictionary
             self._sensor_data_prev[sensor_id] = self._sensor_data[sensor_id].copy()
-            self._sensor_data[sensor_id] = { m_id: None for m_id in self._sensor_measurements[sensor_id] }
+            self._sensor_data[sensor_id] = { m_id: m['Value'] for m_id, m in self._sensor_measurements[sensor_id].items() }
 
             for m_id, raw_m in self._sensor_measurements[sensor_id].items():
                 result_value = None
@@ -816,7 +832,7 @@ class PASCOBLEDevice():
                 print("Could not gather visible data values")
 
         except:
-            print(m)
+            #print(m)
             print('Error: Could not decode the data')
 
 
@@ -837,8 +853,8 @@ class PASCOBLEDevice():
             if m['Type'] == 'ThreeInputVector':
                 inputs = m['Inputs'].split(',')
                 missing_param = False
-                for val in inputs:
-                    if self._sensor_data[channel_id][int(val)] is None:
+                for input in inputs:
+                    if self._sensor_data[channel_id][int(input)] is None:
                         missing_param = True
                         break
                 if missing_param is False:
@@ -881,15 +897,14 @@ class PASCOBLEDevice():
                 result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
 
             elif m['Type'] == 'Derivative':
-                #Ignore for now - This is why we have the _sensor_data_prev object
-                #return None
                 if self._sensor_data_prev[channel_id][m['Inputs']] != None:
                     prev_input_value = self._sensor_data_prev[channel_id][m['Inputs']]
                     result_value = (input_value - prev_input_value) / 2
             
             elif m['Type'] == 'RotaryPos':
-                self._dropcount += input_value
-                result_value = self._dropcount
+                params = m['Params'].split(',')
+                m['Value'] += self._calc_rotary_pos(input_value, float(params[0]), float(params[1]))
+                result_value = m['Value']
 
         if ('Equation' in m):
             raw_equation = m['Equation']
@@ -908,6 +923,27 @@ class PASCOBLEDevice():
                 else:
                     replace_with = str(self._get_measurement_value(channel_id, eVarKey))
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
+
+
+            paranthetic_vals = list(self.parenthetic_contents(raw_equation))
+
+            for i, eqn in paranthetic_vals:
+                if (eqn.startswith('limit')):
+                    limit_eqn = eqn.replace('limit(','')
+                    limit_eqn = limit_eqn.replace(')','')
+                    limit_vals = limit_eqn.split(',')
+                    val = float(limit_vals[0])
+                    min_val = float(limit_vals[1])
+                    max_val = float(limit_vals[2])
+                    
+                    if (val < min_val):
+                        val = min_val
+                    elif (val > max_val):
+                        val = max_val
+        
+                    raw_equation = raw_equation.replace(eqn, str(val))
+                
+                # TODO: Bring other equations into here
 
             if raw_equation.startswith('usound'):
                 usound_eqn = raw_equation.replace('usound(','')
@@ -965,7 +1001,9 @@ class PASCOBLEDevice():
                 try:
                     raw_equation = raw_equation.replace('sqrt', 'math.sqrt')
                     raw_equation = raw_equation.replace('atan2', 'math.atan2')
-
+                    raw_equation = raw_equation.replace('log', 'math.log10')
+                    print(math.log(0.6, 10))
+                    print(raw_equation)
                     result_value = eval(raw_equation)
 
                 except:
@@ -975,6 +1013,17 @@ class PASCOBLEDevice():
 
         #print(f'Results: {result_value}')
         return result_value
+
+
+    def parenthetic_contents(self, string):
+        """Generate parenthesized contents in string as pairs (level, contents)."""
+        stack = []
+        for i, c in enumerate(string):
+            if c == '(':
+                stack.append(i)
+            elif c == ')' and stack:
+                start = stack.pop()
+                yield (len(stack), string[start + 1: i])
 
 
     async def read_factory_cal(self, channel_id):
@@ -1071,17 +1120,51 @@ def main():
     print(pasco_device.get_sensor_list())
     print(pasco_device.get_measurement_list())
 
-    print(pasco_device.read_data('Temperature'))
-
-    while False:
-        value = pasco_device.read_data('Temperature')
-        print(f'Temp: {value}')
+    while True:
+        #value = pasco_device.read_data('LogLightIntensity')
+        #print(f'Temp: {value}')
+        value = pasco_device.read_data_list(['Position','LightIntensity','LogLightIntensity'])
+        print(f"Position: {value['Position']} LightIntensity: {value['LightIntensity']} LogLightIntensity: {value['LogLightIntensity']}")
         #value = pasco_device.read_data_list(['Position','Velocity','Acceleration'])
         #print(f"Pos: {value['Position']} Vel: {value['Velocity']} Accel: {value['Acceleration']}")
         time.sleep(1)
         #rez = pasco_device.read_data_list(['Accelerationx','Accelerationy','Accelerationz'])
         #print(f"X: {rez['Accelerationx']}, Y: {rez['Accelerationy']}, Z: {rez['Accelerationz']}")
 
+
+def test():
+    Bob = PASCOBLEDevice()
+    Bob.connect_by_id('412-335')
+
+    time.sleep(1)
+
+    print(Bob.get_measurement_list())
+
+    time.sleep(1)
+
+    # print(Bob.read_data('Force'))
+    print('Ax: ' + str(Bob.read_data('Accelerationx')))
+    print('Ay: ' + str(Bob.read_data('Accelerationy')))
+    print('Az: ' + str(Bob.read_data('Accelerationz')))
+    print(Bob.read_data('AccelerationResultant'))
+    # print(Bob.read_data('Position'))
+    # print(Bob.read_data('Velocity'))
+    # print(Bob.read_data('Acceleration'))
+    print(Bob.read_data('AngularVelocityx'))
+    print(Bob.read_data('AngularVelocityy'))
+    print(Bob.read_data('AngularVelocityz'))
+    print(Bob.read_data('Altitude'))
+    # print(Bob.read_data('Speed'))
+    # print(Bob.read_data('UVIndex'))
+    # print(Bob.read_data('Illuminance'))
+    # print(Bob.read_data('SolarIrradiance'))
+    # print(Bob.read_data('SolarPAR'))
+    # print(Bob.read_data('WindDirection'))
+    # print(Bob.read_data('MagneticHeading'))
+    # print(Bob.read_data('TrueHeading'))
+    time.sleep(1)
+
+    Bob.disconnect()
 
 if __name__ == "__main__":
     main()
