@@ -196,6 +196,9 @@ class PASCOBLEDevice():
             ble_device (BLEDevice): Device object discovered up when doing scan
         """
     
+        if ble_device is None:
+            raise self.InvalidParameter
+
         if self._client is None:
             self._client = BleakClient(ble_device.address)
 
@@ -222,6 +225,9 @@ class PASCOBLEDevice():
         Args:
             pasco_device_id (string): Device's 6 digit ID (with dash)
         """
+        
+        if pasco_device_id is None:
+            raise self.InvalidParameter
     
         if self._client is None:
             found_devices = self.scan(pasco_device_id)
@@ -564,6 +570,9 @@ class PASCOBLEDevice():
 
         if measurements == None or type(measurements) is not list:
             raise self.InvalidParameter
+        for m in measurements:
+            if type(m) is not str:
+                raise self.InvalidParameter
         else:
             try:
                 sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}

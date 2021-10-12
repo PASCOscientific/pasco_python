@@ -379,28 +379,28 @@ class Icons():
             3: {1,2,3},
             4: {2}
         }
-        self.arrow_topleft = {
+        self.arrow_top_left = {
             0: {0,1,2},
             1: {0,1},
             2: {0,2},
             3: {3},
             4: {4}
         }
-        self.arrow_topright = {
+        self.arrow_top_right = {
             0: {4},
             1: {3},
             2: {0,2},
             3: {0,1},
             4: {0,1,2}
         }
-        self.arrow_bottomleft = {
+        self.arrow_bottom_left = {
             0: {2,3,4},
             1: {3,4},
             2: {2,4},
             3: {1},
             4: {0}
         }
-        self.arrow_bottomright = {
+        self.arrow_bottom_right = {
             0: {0},
             1: {1},
             2: {2,4},
