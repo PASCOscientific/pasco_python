@@ -1,5 +1,5 @@
-from .character_library import get_icon, get_word
-from .pasco_ble_device import PASCOBLEDevice
+from character_library import get_icon, get_word, Icons
+from pasco_ble_device import PASCOBLEDevice
 
 
 class CodeNodeDevice(PASCOBLEDevice):
@@ -37,8 +37,8 @@ class CodeNodeDevice(PASCOBLEDevice):
         led_intensity = self._led_0_to_255(intensity)
 
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LED, led_index, led_intensity ]
-        self._send_command(0, cmd, True)
-        self.loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
+        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def set_leds_in_array(self, led_array=[], intensity=0):
@@ -67,8 +67,8 @@ class CodeNodeDevice(PASCOBLEDevice):
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS,
                 led_activate & 0xFF, led_activate>>8 & 0XFF, led_activate>>16 & 0XFF, led_activate>>24 & 0XFF,
                 led_intensity ]
-        self._send_command(0, cmd)
-        self.loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
+        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def set_rgb_led(self, r=0, g=0, b=0):
@@ -86,8 +86,8 @@ class CodeNodeDevice(PASCOBLEDevice):
         led_b = self._led_0_to_255(b)
 
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS, led_r, led_g, led_b, 0X80, 0X00 ]
-        self._send_command(0, cmd, True)
-        self.loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
+        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def set_sound_frequency(self, frequency):
@@ -98,20 +98,18 @@ class CodeNodeDevice(PASCOBLEDevice):
             Frequency (in hertz)
         """
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_SOUND_FREQ, frequency & 0xFF, frequency>>8 & 0XFF ]
-        self._send_command(0, cmd, True)
-        self.loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
+        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def scroll_text_in_array(self, text):
         matrix = get_word(text.upper())
-        #print(matrix)
         for disp in matrix:
             self.set_leds_in_array(disp, 128)
 
 
     def show_image_in_array(self, image):
         matrix = get_icon(image)
-        #print(matrix)
         self.set_leds_in_array(matrix, 128)
 
 

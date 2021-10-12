@@ -1,5 +1,4 @@
 from pasco.code_node_device import CodeNodeDevice
-from pasco.pasco_ble_device import PASCOBLEDevice
 from pasco.character_library import Icons
 
 
@@ -8,19 +7,15 @@ def main():
     p_code_node = CodeNodeDevice()
     p_code_node.connect_by_id('020-122')
 
-    #p_code_node.reset()
-    light_on = False
+    p_code_node.reset()
 
-    while True:
-        if input('What?') == '1':
-            p_code_node.set_rgb_led(100, 100, 100)
-            p_code_node.scroll_text_in_array("HELLO")
-            p_code_node.show_image_in_array(Icons().smile)
-            p_code_node.show_image_in_array(Icons().sad)
-            light_on = True
-        else:
-            p_code_node.reset()
-            light_on = False
+    while p_code_node.read_data('Button1') == 0:
+        p_code_node.set_rgb_led(100, 100, 100)
+        p_code_node.scroll_text_in_array("HELLO")
+        p_code_node.show_image_in_array(Icons().smile)
+        p_code_node.show_image_in_array(Icons().sad)
+
+    p_code_node.reset()
 
     p_code_node.set_sound_frequency(600)
     p_code_node.set_sound_frequency(300)

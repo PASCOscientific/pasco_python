@@ -13,3 +13,5 @@ src/pasco.egg-info/SOURCES.txt
 src/pasco.egg-info/dependency_links.txt
 src/pasco.egg-info/requires.txt
 src/pasco.egg-info/top_level.txt
+src/pasco/__pycache__/character_library.cpython-37.pyc
+src/pasco/__pycache__/pasco_ble_device.cpython-37.pyc

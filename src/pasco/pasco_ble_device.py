@@ -3,6 +3,7 @@ import math
 import os
 import re
 import time
+from typing import List
 import xml.etree.ElementTree as ET
 
 from bleak import BleakClient, discover
@@ -45,17 +46,15 @@ class PASCOBLEDevice():
         self._data_ack_counter = {}
 
         self._device_sensors = []
-        self._device_measurements = []
+        self._device_measurements = {}
         self._handle_service = {}
         self._data_stack = {}
-        self._single_measurement_packet = []
-        self._sensor_measurements = {}
-        self._factory_cal_params = {}
+        self._data_packet = []
         self._sensor_data = {}
         self._sensor_data_prev = {}
         self._rotary_pos_data = {}
-        self._dropcount = 0
 
+        self._notify_sensor_id = None
         self._data_results = {}
         self._measurement_sensor_ids = {}
 
@@ -82,15 +81,16 @@ class PASCOBLEDevice():
             'Optical DO',
             'pH',
             'Pressure',
+            'Rotary Motion',
             'Smart Cart',
             'Temperature',
             'Voltage',
             'Weather',
         ]
+
         """
         self._not_compatible_devices = [
             'BP',
-            'Rotary Motion',
             'Smart Gate',
             'Sound',
             'EKG',
@@ -121,10 +121,6 @@ class PASCOBLEDevice():
         return self._client
 
     @property
-    def loop(self):
-        return self._loop
-
-    @property
     def address(self):
         return self._address
 
@@ -136,17 +132,13 @@ class PASCOBLEDevice():
     def device_sensors(self):
         return self._device_sensors
 
-    @property
-    def measurement_sensor_ids(self):
-        return self._measurement_sensor_ids
-
 
     def scan(self, sensor_name_filter=None):
         """
         Scans for all PASCO devices
 
         Args:
-            sensor_name_filter (string): Sensor name to scan for
+            sensor_name_filter (string, optional): Sensor name to scan for
 
         Returns:
             List of devices that are compatible with this library
@@ -216,12 +208,11 @@ class PASCOBLEDevice():
                 self._set_device_params(ble_device)
 
                 if (self._dev_type == "Rotary Motion"):
-                    self._send_command(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START, False)
+                    self._send_command(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START)
 
-                self._loop.run_until_complete(self._initialize_sensor_values())
+                self._initialize_sensor_values()
         else:
             raise self.BLEAlreadyConnectedError()
-
 
 
     def connect_by_id(self, pasco_device_id):
@@ -253,7 +244,7 @@ class PASCOBLEDevice():
 
 
     def keepalive(self):
-        self._send_command(self.SENSOR_SERVICE_ID, [0x00], False)
+        self._send_command(self.SENSOR_SERVICE_ID, [0x00])
 
 
     def _set_handle_service(self):
@@ -266,7 +257,7 @@ class PASCOBLEDevice():
 
     def is_connected(self):
         """
-        Returns True if connected, False otherwise.
+        Returns boolean for the connection state
         """
         if self._client != None:
             return self._client.is_connected
@@ -307,9 +298,9 @@ class PASCOBLEDevice():
         """
         Decode Base-64 character to corresponding integer
         0-9 	-> '0' - '9'
-        10-25	-> 'K' - 'Z' -- Note: this funkiness is required due to an error in this code that was caught
-        26-35	-> 'A' - 'J' -- after the wireless sensors went into production, so part of the bug stays
-        36-61	-> 'a' - 'z' -- since the bug also exists in the matching sensor firmware code
+        10-25	-> 'K' - 'Z'
+        26-35	-> 'A' - 'J'
+        36-61	-> 'a' - 'z'
         62		-> '#'
         63		-> '*'
 
@@ -363,7 +354,7 @@ class PASCOBLEDevice():
         exp = (value >> (bit_len-9)) & 0xFF
         mantissa = value & 0xFFFFFF | 0x800000 if exp != 0 else value & 0x7FFFFFFF
 
-        return sign * mantissa * 2**(exp-150)
+        return float(sign * mantissa * 2**(exp-150))
 
 
     def _calc_4_params(self, raw, x1, y1, x2, y2):
@@ -391,7 +382,7 @@ class PASCOBLEDevice():
         return (count * x) / r
 
 
-    def _send_command(self, service_id, command, wait_for_response=False):
+    def _send_command(self, service_id, command):
         """
         Sends a command to our device
 
@@ -407,20 +398,11 @@ class PASCOBLEDevice():
             Error if we were unable to send command
         """
         uuid = self._set_uuid(service_id, self.SEND_CMD_CHAR_ID)
-        
-        data_to_write = bytes(command).hex()
-
-        bleWrite = "BLE WRITE: >>>"
-        bleWrite += data_to_write
-        #print(bleWrite)
 
         try:
-            self._loop.run_until_complete(self._async_write(uuid, command, wait_for_response))
+            self._write(uuid, command)
         except:
-            print('ERROR: BLE write failed')
-            return False
-
-        return True
+            raise self.CommunicationError
 
 
     def _send_ack(self, service_id, command):
@@ -433,26 +415,21 @@ class PASCOBLEDevice():
         """
         uuid = self._set_uuid(service_id, self.SEND_ACK_CHAR_ID)
 
-        data_to_write = bytes(command).hex()
-
-        bleWrite = "BLE WRITE: >>>"
-        bleWrite += data_to_write
-        #print(bleWrite)
-
         try:
-            self._loop.run_until_complete(self._async_write(uuid, command, wait_for_response=False))
+            self._loop.run_until_complete(self._write(uuid, command))
         except:
-            print('ERROR: BLE write failed')
-            return False
-
-        return True
+            raise self.CommunicationError
 
 
-    async def _async_write(self, uuid, data_to_write, wait_for_response):
-        await self._client.write_gatt_char(uuid, bytes(data_to_write), wait_for_response)
+    def _write(self, uuid, data_to_write):
+        #data_to_write = bytes(command).hex()
+        #ble_write_data = f'WRITE# {data_to_write} to {uuid}'
+        #print(ble_write_data)
+
+        self._loop.run_until_complete(self._client.write_gatt_char(uuid, bytes(data_to_write)))
 
 
-    async def _initialize_sensor_values(self):
+    def _initialize_sensor_values(self):
         try:
             interface = self._xml_root.find("./Interfaces/Interface[@ID='%s']" % self._interface_id)
 
@@ -481,14 +458,14 @@ class PASCOBLEDevice():
                 if sensor['type'] == 'Pasport':
                     self._data_ack_counter[sensor['id']] = 0
                     self._data_stack[sensor['id']] = []
-                    self._sensor_measurements[sensor['id']] = {}
+                    self._device_measurements[sensor['id']] = {}
                                         
                     xml_measurements = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % sensor['sensor_id'])
                     for measurement in xml_measurements.findall("./Measurement"):
                         measurement_id = {int(measurement.get('ID')): measurement.attrib}
-                        self._sensor_measurements[sensor['id']].update(measurement_id)
+                        self._device_measurements[sensor['id']].update(measurement_id)
 
-                    for sensor_m_id, sensor_m in self._sensor_measurements[sensor['id']].items():
+                    for sensor_m_id, sensor_m in self._device_measurements[sensor['id']].items():
                         sensor_m['ID'] = int(sensor_m['ID'])
                         sensor_m['Type'] = sensor_m['Type'] if 'Type' in sensor_m else ''
                         sensor_m['Visible'] = int(sensor_m['Visible']) if 'Visible' in sensor_m else 0
@@ -498,25 +475,16 @@ class PASCOBLEDevice():
                             sensor['total_data_size'] += sensor_m['DataSize']
                         if 'Inputs' in sensor_m and sensor_m['Inputs'].isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
                         if 'Precision' in sensor_m and sensor_m['Precision'].isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
-                        # if sensor_m['Type'] == 'FactoryCal':
-                            # await self.read_factory_cal(sensor['id'])
-                            # Do Factory Cal reading here
                         #TODO: This is a temporary workaround for the code node cart
                         if sensor_m['NameTag'] == "RawCartPosition":
                             sensor_m['DataSize'] = 0
                         sensor_m['Value'] = sensor_m['Value'] if 'Value' in sensor_m else 0 if sensor_m['Type'] == 'RotaryPos' else None
 
-                        #print(sensor_m)
-
-                    # TODO: Factory Calibration
-                    #await self.read_factory_cal(sensor['id'])
-
-                    #print('got the cal')
-
                     # Initialize internal sensor measurement values
-                    self._sensor_data[sensor['id']] = { m_id: m['Value'] for m_id, m in self._sensor_measurements[sensor['id']].items() }
+                    self._sensor_data[sensor['id']] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor['id']].items() }
 
-                    print(self._sensor_data)
+                    # TODO: Factory Calibration check
+                    self.read_factory_cal(sensor['id'])
             
             # Initialize device measurement values
             self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in device_sensors for measurement in sensor['measurements'] }
@@ -525,14 +493,14 @@ class PASCOBLEDevice():
             self._device_sensors = {sensor['name'] : sensor for sensor in device_sensors}
 
         except:
-            print("Could not setup sensor measurements")
+            raise self.SensorSetupError
 
 
     def get_sensor_list(self):
         """
         Return list of sensor names that a device has
         """
-        if self.is_connected() is None:
+        if self.is_connected() is False:
             raise self.DeviceNotConnected()
 
         return [sensor_name for sensor_name, sensor in self._device_sensors.items()]
@@ -543,13 +511,20 @@ class PASCOBLEDevice():
         Return list of measurements that a device can read
 
         Args:
-            sensor_name (string): Optional paramater to only return measurements for a sensor
+            sensor_name (string, optional): Sensor to return measurements for
         """
-    
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
+
+        if sensor_name and type(sensor_name) is not str:
+            raise self.InvalidParameter
+
         if sensor_name == None:
             measurement_list = [measurement for measurement in self._data_results]
+        elif sensor_name in self._device_sensors:
+            measurement_list = self._device_sensors[sensor_name]['measurements']
         else:
-            measurement_list = self._device_sensors[sensor_name]['measurements'] if sensor_name in self._device_sensors else None
+            raise self.SensorNotFound
 
         return measurement_list
 
@@ -561,9 +536,11 @@ class PASCOBLEDevice():
         Args:
             measurement (string): name of measurement we want to read
         """
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
 
-        if measurement == None:
-            pass
+        if measurement == None or type(measurement) is not str:
+            raise self.InvalidParameter
         else:
             try:
                 sensor_id = self._measurement_sensor_ids[measurement]
@@ -574,8 +551,6 @@ class PASCOBLEDevice():
 
             return self._data_results[measurement]
 
-        return None
-
 
     def read_data_list(self, measurements):
         """
@@ -584,9 +559,11 @@ class PASCOBLEDevice():
         Args:
             measurement (List(string)): List of measurements that we want to read
         """
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
 
-        if measurements == None:
-            pass
+        if measurements == None or type(measurements) is not list:
+            raise self.InvalidParameter
         else:
             try:
                 sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
@@ -606,8 +583,6 @@ class PASCOBLEDevice():
             except:
                 raise self.InvalidParameter
 
-        return None
-
 
     def get_measurement_unit(self, measurement):
         """
@@ -617,13 +592,15 @@ class PASCOBLEDevice():
             measurement (string): name of measurement we want the units for
         """
 
-        if measurement == None:
-            pass
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
 
+        if measurement == None or type(measurement) is not str:
+            raise self.InvalidParameter
         else:
             try:
                 sensor_id = self._measurement_sensor_ids[measurement]
-                for m_id, m in self._sensor_measurements[sensor_id].items():
+                for m_id, m in self._device_measurements[sensor_id].items():
                     if m['NameTag'] == measurement:
                         return m['UnitType']
             except:
@@ -640,9 +617,11 @@ class PASCOBLEDevice():
             measurements (List(string)): List of measurements that we want the units for
         """
 
-        if measurements == None:
-            pass
-    
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
+
+        if measurements == None or type(measurements) is not list:
+            raise self.InvalidParameter    
         else:
             try:
                 sensor_ids = {self._measurement_sensor_ids[m] for m in measurements}
@@ -650,7 +629,7 @@ class PASCOBLEDevice():
                 measurement_units = {
                     measurement: m['UnitType']
                     for sensor_id in sensor_ids
-                    for m_id, m in self._sensor_measurements[sensor_id].items()
+                    for m_id, m in self._device_measurements[sensor_id].items()
                     for measurement in measurements
                     if m['NameTag'] == measurement
                 }
@@ -664,88 +643,91 @@ class PASCOBLEDevice():
     async def _single_listen(self, service_id):
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
-        await self._client.stop_notify(uuid)
+        #await self._client.stop_notify(uuid) # TODO: may need to uncomment this
 
 
-    async def _notify_callback(self, handle, value):
-        bleNotif = "BLE NOTIFY: <<<"
-        bleNotif += " ".join( [ "%02X " % c for c in value ] ).strip()
-        #print(bleNotif)
+    async def _notify_callback(self, handle: int, data: bytearray):
+        #ble_notify_data = f'NOTIFY# {"".join(["%02X " % d for d in data])}'
+        #print(ble_notify_data)
 
         # Reading measurement response
         if self._handle_service[handle] > 0:
-            channel_id = self._handle_service[handle] - 1
+            sensor_id = self._handle_service[handle] - 1
 
             # Received periodic data
-            if (value[0] <= 0x1F):
+            if (data[0] <= 0x1F):
                 
                 # Add data to stack
-                self._data_stack[channel_id] += value[1:]
+                self._data_stack[sensor_id] += data[1:]
 
-                self._data_ack_counter[channel_id] += 1
+                self._data_ack_counter[sensor_id] += 1
 
-                self._loop.create_task(self._decode_data(channel_id))
+                self._loop.create_task(self._decode_data(sensor_id))
                 #self.send_data()
 
                 # Send acknowledgement package
-                if (self._data_ack_counter[channel_id] > 8):
+                if (self._data_ack_counter[sensor_id] > 8):
                     try:
-                        self._data_ack_counter[channel_id] = 0
-                        service_id = channel_id + 1
-                        command = [ value[0] ]
+                        self._data_ack_counter[sensor_id] = 0
+                        service_id = sensor_id + 1
+                        command = [ data[0] ]
                         self._send_ack(service_id, command)
                     except:
-                        print('Problem sending acknowledgement command')
+                        raise self.CommunicationError()
                 return
 
             # Received single data packet
-            elif (value[0] is self.GRSP_RESULT):
+            elif (data[0] is self.GRSP_RESULT):
                 # Valid data 
-                if value[1] == 0x00:
-                    if value[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._single_measurement_packet = value[3:]
-                    elif value[2] == 1: #SPI Data (ex: AirLink Interface connected)
+                if data[1] == 0x00:
+                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
+                        self._data_packet = data[3:]
+                    elif data[2] == 1: #SPI Data (ex: AirLink Interface connected)
                         pasport_service_id = 1
-                        self._send_command(pasport_service_id, [ 0x08 ], True)
-                        self.loop.run_until_complete(self._single_listen(pasport_service_id))
+                        self._send_command(pasport_service_id, [ 0x08 ])
+                        self._loop.run_until_complete(self._single_listen(pasport_service_id))
                         #TODO: AirLink things
 
                 # Error receiving data
-                elif value[1] == 0x01:
-                    print(f'Error on channel # {channel_id}')
+                elif data[1] == 0x01:
+                    #print(f'Error on channel # {sensor_id}')
+                    pass
 
-            elif (value[0] == self.GEVT_SENSOR_ID):
-                self._airlink_sensor_id = value[1]
+            elif (data[0] == self.GEVT_SENSOR_ID):
+                self._airlink_sensor_id = data[1]
 
         # Reading device response
         elif self._handle_service[handle] == 0:
             # Received single data packet
-            if (value[0] is self.GRSP_RESULT):
+            if (data[0] is self.GRSP_RESULT):
                 # Valid data 
-                if value[1] == 0x00:
-                    if value[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._single_measurement_packet = value[3:]
+                if data[1] == 0x00:
+                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
+                        self._data_packet = data[3:]
 
             # Get factory calibration
-            elif (value[0] == 0x0A):
-                self._factory_cal_params[value[1]] = []
+            elif (data[0] == 0x0A):
+                factory_cal_params = {data[1]: []}
+                #self._factory_cal_params[data[1]] = []
                 num_params = 4
                 byte_len = 4
-                data = value[2:]
+                cal_data = data[2:]
                 for p in range(num_params):
                     byte_value = 0
                     for d in range(byte_len):
-                        stack_value = data.pop(0)
+                        stack_value = cal_data.pop(0)
                         byte_value += stack_value * (2**(8*d))
 
-                    self._factory_cal_params[value[1]].append(float(self._binary_float(byte_value, byte_len)))
-            
-                print('---factoryparams---')
-                print(self._factory_cal_params)
+                    param = self._binary_float(byte_value, byte_len)
+                    factory_cal_params[data[1]].append(param)
 
-            elif (value[0] == 0x0B):
-                pass
-            #print(handle)
+                # Save factory calibration parameters to measurement
+                for m_id, m in self._device_measurements[self._notify_sensor_id].items():
+                    if 'FactoryCalOrder' in m and m['FactoryCalOrder'] in factory_cal_params:
+                        m['FactoryCalParams'] = factory_cal_params[m['FactoryCalOrder']]
+
+            elif (data[0] == 0x0B):
+                self._notify_sensor_id = None
 
 
     def _get_sensor_measurements(self, sensor_id):
@@ -757,24 +739,22 @@ class PASCOBLEDevice():
 
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
-        self._send_command(service_id, one_shot_cmd, False)
-        time.sleep(.1) # TODO: This delay allows us to wait for the response.
-        self.loop.run_until_complete(self._single_listen(service_id))
+        self._send_command(service_id, one_shot_cmd)
+        self._notify_sensor_id = sensor_id
+        time.sleep(0.2) # TODO: Remove this artificial sleep
+        self._loop.run_until_complete(self._single_listen(service_id))
 
-
-        self._data_stack[sensor_id] = self._single_measurement_packet
-        self.loop.run_until_complete(self._decode_data(sensor_id))
+        self._data_stack[sensor_id] = self._data_packet
+        self._loop.run_until_complete(self._decode_data(sensor_id))
 
 
     async def _decode_data(self, sensor_id):
         try:
-            # Save and reset current data dictionary
             self._sensor_data_prev[sensor_id] = self._sensor_data[sensor_id].copy()
-            self._sensor_data[sensor_id] = { m_id: m['Value'] for m_id, m in self._sensor_measurements[sensor_id].items() }
+            self._sensor_data[sensor_id] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor_id].items() }
 
-            for m_id, raw_m in self._sensor_measurements[sensor_id].items():
+            for m_id, raw_m in self._device_measurements[sensor_id].items():
                 result_value = None
-
                 if raw_m['Type'] == 'RawDigital':
                     byte_value = 0
                     for d in range(raw_m['DataSize']):
@@ -782,7 +762,6 @@ class PASCOBLEDevice():
                             stack_value = self._data_stack[sensor_id].pop(0)
                             byte_value += stack_value * (2**(8*d))
                             result_value = byte_value
-
                     if (raw_m['DataSize'] == 4 or ('TwosComp' in raw_m and int(raw_m['TwosComp']) == 1)):
                         result_value = self._twos_comp(result_value, raw_m['DataSize'])
 
@@ -806,13 +785,7 @@ class PASCOBLEDevice():
                 val = {raw_m['ID']: result_value}
                 self._sensor_data[sensor_id].update(val)
 
-            """
-            print("===RAW===")
-            print(self._sensor_data)
-            print("=========")
-            """
-
-            for m_id, m in self._sensor_measurements[sensor_id].items():
+            for m_id, m in self._device_measurements[sensor_id].items():
                 if self._sensor_data[sensor_id][m_id] == None:
                     result_value = self._get_measurement_value(sensor_id, m_id)
                     if 'Precision' in m and result_value != None:
@@ -823,62 +796,58 @@ class PASCOBLEDevice():
 
             # Set visible data variables
             try:
-                for channel_id, measurements in self._sensor_measurements.items():
+                for channel_id, measurements in self._device_measurements.items():
                     for m_id, m in measurements.items():
                         if (m['Visible'] == 1 and self._sensor_data[channel_id][m_id] != None):
                             result_val = { m['NameTag']: self._sensor_data[channel_id][m_id] }
                             self._data_results.update(result_val)
             except:
-                print("Could not gather visible data values")
+                raise self.SensorSetupError
 
         except:
-            #print(m)
-            print('Error: Could not decode the data')
+            raise self.CouldNotDecodeData
 
 
-    def _get_measurement_value(self, channel_id, measurement_id):
-        m = self._sensor_measurements[channel_id][measurement_id]
+    def _get_measurement_value(self, sensor_id, measurement_id):
+        m = self._device_measurements[sensor_id][measurement_id]
         result_value = None
         input_value = None
 
-        #print(self._sensor_data[channel_id])
-
-        if m['Type'] == 'RawDigital' and self._sensor_data[channel_id][measurement_id] == None:
-            #print('the raw is not there')
+        if m['Type'] == 'RawDigital' and self._sensor_data[sensor_id][measurement_id] == None:
+            # TODO: #print('the raw value is not there')
             pass
 
         if 'Inputs' in m:
             # Multiple Input
-            ##print(m)
             if m['Type'] == 'ThreeInputVector':
                 inputs = m['Inputs'].split(',')
                 missing_param = False
                 for input in inputs:
-                    if self._sensor_data[channel_id][int(input)] is None:
+                    if self._sensor_data[sensor_id][int(input)] is None:
                         missing_param = True
                         break
                 if missing_param is False:
-                    ax = self._sensor_data[channel_id][int(inputs[0])]
-                    ay = self._sensor_data[channel_id][int(inputs[1])]
-                    az = self._sensor_data[channel_id][int(inputs[2])]
+                    ax = self._sensor_data[sensor_id][int(inputs[0])]
+                    ay = self._sensor_data[sensor_id][int(inputs[1])]
+                    az = self._sensor_data[sensor_id][int(inputs[2])]
                     result_value = math.sqrt(ax**2 + ay**2 + az**2)
             elif m['Type'] == 'Select': # For Current, Voltage and Accel
                 inputs = m['Inputs'].split(',')
 
                 need_input = int(inputs[0])
 
-                if self._sensor_data[channel_id][need_input] is not None:
-                    result_value = self._sensor_data[channel_id][need_input]
+                if self._sensor_data[sensor_id][need_input] is not None:
+                    result_value = self._sensor_data[sensor_id][need_input]
                 else:
-                    result_value = self._get_measurement_value(channel_id, need_input)
+                    result_value = self._get_measurement_value(sensor_id, need_input)
 
             # Single Input
             else:
                 need_input = int(m['Inputs'])
-                if self._sensor_data[channel_id][need_input] is not None:
-                    input_value = self._sensor_data[channel_id][need_input]
+                if self._sensor_data[sensor_id][need_input] is not None:
+                    input_value = self._sensor_data[sensor_id][need_input]
                 else:
-                    input_value = self._get_measurement_value(channel_id, need_input)
+                    input_value = self._get_measurement_value(sensor_id, need_input)
 
         if (input_value is not None):
             if m['Type'] == 'UserCal':
@@ -897,8 +866,8 @@ class PASCOBLEDevice():
                 result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
 
             elif m['Type'] == 'Derivative':
-                if self._sensor_data_prev[channel_id][m['Inputs']] != None:
-                    prev_input_value = self._sensor_data_prev[channel_id][m['Inputs']]
+                if self._sensor_data_prev[sensor_id][m['Inputs']] != None:
+                    prev_input_value = self._sensor_data_prev[sensor_id][m['Inputs']]
                     result_value = (input_value - prev_input_value) / 2
             
             elif m['Type'] == 'RotaryPos':
@@ -917,11 +886,11 @@ class PASCOBLEDevice():
 
                 raw_equation = raw_equation.replace('^', '**')
 
-                if self._sensor_data[channel_id][eVarKey] != None:
-                    replace_with = str(self._sensor_data[channel_id][eVarKey])
+                if self._sensor_data[sensor_id][eVarKey] != None:
+                    replace_with = str(self._sensor_data[sensor_id][eVarKey])
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
                 else:
-                    replace_with = str(self._get_measurement_value(channel_id, eVarKey))
+                    replace_with = str(self._get_measurement_value(sensor_id, eVarKey))
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
 
 
@@ -1002,16 +971,12 @@ class PASCOBLEDevice():
                     raw_equation = raw_equation.replace('sqrt', 'math.sqrt')
                     raw_equation = raw_equation.replace('atan2', 'math.atan2')
                     raw_equation = raw_equation.replace('log', 'math.log10')
-                    print(math.log(0.6, 10))
-                    print(raw_equation)
                     result_value = eval(raw_equation)
 
                 except:
-                    # equation likely has a string in it
-                    # print(f"Unable to calculate equation: {raw_equation}")
+                    # equation likely has a string that we don't recognize yet
                     raise self.InvalidEquation()
 
-        #print(f'Results: {result_value}')
         return result_value
 
 
@@ -1026,17 +991,16 @@ class PASCOBLEDevice():
                 yield (len(stack), string[start + 1: i])
 
 
-    async def read_factory_cal(self, channel_id):
+    def read_factory_cal(self, sensor_id):
         """
         Read factory calibrations from sensor's built in memory
         """
-        print('getting factory cal')
         factory_cal_count = 0
 
-        for m_id, m in self._sensor_measurements[channel_id].items():
+        for m_id, m in self._device_measurements[sensor_id].items():
             if m['Type'] == 'FactoryCal':
+                m['FactoryCalOrder'] = factory_cal_count
                 factory_cal_count += 1
-                #print(m)
 
         if factory_cal_count > 0:
             # Transfer Block RAM Command
@@ -1044,7 +1008,7 @@ class PASCOBLEDevice():
             ll_storage = 3
             ll = ll_read + ll_storage
 
-            address = channel_id + 2
+            address = sensor_id + 2
             num_bytes = 16 * factory_cal_count
             service_id = self.SENSOR_SERVICE_ID
             
@@ -1052,22 +1016,25 @@ class PASCOBLEDevice():
                         address & 0xFF, address>>8 & 0XFF, address>>16 & 0XFF, address>>24 & 0XFF,
                         num_bytes & 0xFF, num_bytes>>8 & 0XFF ]
 
-            self._send_command(service_id, command, True)
-            #await self._single_listen(service_id)
+            self._send_command(service_id, command)
+            self._notify_sensor_id = sensor_id
+            self._loop.run_until_complete(self._single_listen(service_id))
 
             #Start Block Command
             command = [ 0X09, 0X01, num_bytes & 0XFF, num_bytes>>8 & 0XFF, 16 ]
 
-            self._send_command(service_id, command, True)
-            #await self._single_listen(service_id)
+            self._send_command(service_id, command)
+            self._notify_sensor_id = sensor_id
+            self._loop.run_until_complete(self._single_listen(service_id))
 
-            # Save Factory Calibration Parameters
-            for m_id, m in self._sensor_measurements[channel_id].items():
+            """
+            for m_id, m in self._device_measurements[sensor_id].items():
                 i = 0
                 if m['Type'] == 'FactoryCal':
                     m['FactoryCalParams'] = self._factory_cal_params[i]
-
+            
             self._factory_cal_params = {}
+            """
 
 
     class Error(Exception):
@@ -1097,74 +1064,22 @@ class PASCOBLEDevice():
         """An invalid parameter was passed in"""
         pass
 
+    class SensorNotFound(Exception):
+        """The device does not have this sensor"""
+        pass
+
     class InvalidEquation(Exception):
         """Could not calculate the measurement"""
         pass
 
+    class CouldNotDecodeData(Exception):
+        """Could not decode data the raw data from the sensor"""
+        pass
 
-def main():
+    class CommunicationError(Exception):
+        """Error sending or receiving data from the sensor"""
+        pass
 
-    pasco_device = PASCOBLEDevice()
-    found_devices = pasco_device.scan()
-
-    if found_devices:
-        for i, ble_device in enumerate(found_devices):
-            print(f'{i}: {ble_device.name}')
-        
-        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-        pasco_device.connect(found_devices[int(selected_device)])
-    else:
-        print("No Devices Found")
-        exit(1)
-
-    print(pasco_device.get_sensor_list())
-    print(pasco_device.get_measurement_list())
-
-    while True:
-        #value = pasco_device.read_data('LogLightIntensity')
-        #print(f'Temp: {value}')
-        value = pasco_device.read_data_list(['Position','LightIntensity','LogLightIntensity'])
-        print(f"Position: {value['Position']} LightIntensity: {value['LightIntensity']} LogLightIntensity: {value['LogLightIntensity']}")
-        #value = pasco_device.read_data_list(['Position','Velocity','Acceleration'])
-        #print(f"Pos: {value['Position']} Vel: {value['Velocity']} Accel: {value['Acceleration']}")
-        time.sleep(1)
-        #rez = pasco_device.read_data_list(['Accelerationx','Accelerationy','Accelerationz'])
-        #print(f"X: {rez['Accelerationx']}, Y: {rez['Accelerationy']}, Z: {rez['Accelerationz']}")
-
-
-def test():
-    Bob = PASCOBLEDevice()
-    Bob.connect_by_id('412-335')
-
-    time.sleep(1)
-
-    print(Bob.get_measurement_list())
-
-    time.sleep(1)
-
-    # print(Bob.read_data('Force'))
-    print('Ax: ' + str(Bob.read_data('Accelerationx')))
-    print('Ay: ' + str(Bob.read_data('Accelerationy')))
-    print('Az: ' + str(Bob.read_data('Accelerationz')))
-    print(Bob.read_data('AccelerationResultant'))
-    # print(Bob.read_data('Position'))
-    # print(Bob.read_data('Velocity'))
-    # print(Bob.read_data('Acceleration'))
-    print(Bob.read_data('AngularVelocityx'))
-    print(Bob.read_data('AngularVelocityy'))
-    print(Bob.read_data('AngularVelocityz'))
-    print(Bob.read_data('Altitude'))
-    # print(Bob.read_data('Speed'))
-    # print(Bob.read_data('UVIndex'))
-    # print(Bob.read_data('Illuminance'))
-    # print(Bob.read_data('SolarIrradiance'))
-    # print(Bob.read_data('SolarPAR'))
-    # print(Bob.read_data('WindDirection'))
-    # print(Bob.read_data('MagneticHeading'))
-    # print(Bob.read_data('TrueHeading'))
-    time.sleep(1)
-
-    Bob.disconnect()
-
-if __name__ == "__main__":
-    main()
+    class SensorSetupError(Exception):
+        """Error setting the sensor parameters up"""
+        pass
