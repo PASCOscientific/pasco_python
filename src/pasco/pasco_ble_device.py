@@ -3,7 +3,6 @@ import math
 import os
 import re
 import time
-from typing import List
 import xml.etree.ElementTree as ET
 
 from bleak import BleakClient, discover
@@ -15,13 +14,15 @@ class PASCOBLEDevice():
     """
     PASCO Device object that has functions for connecting and getting data
     """
-
     SENSOR_SERVICE_ID = 0
 
     SEND_CMD_CHAR_ID = 2
     RECV_CMD_CHAR_ID = 3
     SEND_ACK_CHAR_ID = 5
 
+    GCMD_CUSTOM_CMD = 0x37
+    GCMD_CONTROL_NODE_CMD = 0x37
+    CTRLNODE_CMD_DETECT_DEVICES = 2         # Detects which devices are attached
     GCMD_READ_ONE_SAMPLE = 0x05
     GCMD_XFER_BURST_RAM = 0X0E
 
@@ -69,6 +70,7 @@ class PASCOBLEDevice():
             'Accel Alt',
             'CO2',
             'Conductivity',
+            '//control.Node',
             'Current',
             'Diffraction',
             'Drop Counter',
@@ -199,28 +201,29 @@ class PASCOBLEDevice():
         if ble_device is None:
             raise self.InvalidParameter
 
-        if self._client is None:
-            self._client = BleakClient(ble_device.address)
-
-            try:
-                self._loop.run_until_complete(self._async_connect())
-                self.keepalive()
-            except ConnectionError:
-                exit(1)
-            else:
-                self._set_device_params(ble_device)
-
-                if (self._dev_type == "Rotary Motion"):
-                    self._send_command(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START)
-
-                self._initialize_sensor_values()
-        else:
+        if self._client is not None:
             raise self.BLEAlreadyConnectedError()
+
+        self._client = BleakClient(ble_device.address)
+
+        try:
+            self._loop.run_until_complete(self._async_connect())
+            self.keepalive()
+        except:
+            raise self.BLEConnectionError
+
+        else:
+            self._set_device_params(ble_device)
+
+            if (self._dev_type == "Rotary Motion"):
+                self._send_command(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START)
+
+            self._initialize_sensor_values()
 
 
     def connect_by_id(self, pasco_device_id):
         """
-        Connect to a bluetooth device
+        Connect to a bluetooth device using the 6 digit ID printed on the case
 
         Args:
             pasco_device_id (string): Device's 6 digit ID (with dash)
@@ -229,13 +232,18 @@ class PASCOBLEDevice():
         if pasco_device_id is None:
             raise self.InvalidParameter
     
-        if self._client is None:
-            found_devices = self.scan(pasco_device_id)
-            ble_device = found_devices[0]
-
-            self.connect(ble_device)
-        else:
+        if self._client is not None:
             raise self.BLEAlreadyConnectedError()
+
+        try:
+            found_devices = self.scan(pasco_device_id)
+            if found_devices:
+                ble_device = found_devices[0]
+                self.connect(ble_device)
+            else:
+                raise self.BLEConnectionError
+        except:
+            raise self.BLEConnectionError
 
 
     async def _async_connect(self):
@@ -448,11 +456,13 @@ class PASCOBLEDevice():
                     'output_type': c.get('OutputType') if 'OutputType' in c.attrib else '',
                     'measurements': [],
                     'total_data_size': 0,
+                    'plug_detect': c.get('PlugDetect') if 'PlugDetect' in c.attrib else '',
                     'factory_cal_ids': []
                 }
                 for c in interface.findall("./Channel")
             ]
             
+            # Iterate over Channels in XML
             for sensor in device_sensors:
                 sensor_data = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % str(sensor['sensor_id']))
                 if sensor_data:
@@ -460,12 +470,13 @@ class PASCOBLEDevice():
                     sensor['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement[@Visible='1']")]
                     sensor['factory_cal_ids'] = [m.get('ID') for m in sensor_data.findall("./Measurement[@Type='FactoryCal']")]
 
-            for sensor in device_sensors:
-                if sensor['type'] == 'Pasport':
+            # Iterate over Channels in XML
+            #for sensor in device_sensors:
+                if sensor['type'] == 'Pasport' and sensor['sensor_id'] != "":
                     self._data_ack_counter[sensor['id']] = 0
                     self._data_stack[sensor['id']] = []
                     self._device_measurements[sensor['id']] = {}
-                                        
+
                     xml_measurements = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % sensor['sensor_id'])
                     for measurement in xml_measurements.findall("./Measurement"):
                         measurement_id = {int(measurement.get('ID')): measurement.attrib}
@@ -492,6 +503,17 @@ class PASCOBLEDevice():
                     # TODO: Factory Calibration check
                     self.read_factory_cal(sensor['id'])
             
+                elif sensor['type'] == 'Pasport' and sensor['sensor_id'] == "":
+                    # TODO: ControlNode stuff
+                    #print(sensor)
+
+                    if sensor['plug_detect'] == 1:
+                        sensor['']
+                        
+                        self.detect_controlnode_devices()
+                    pass
+
+
             # Initialize device measurement values
             self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in device_sensors for measurement in sensor['measurements'] }
             self._data_results = { m: None for sensor in device_sensors for m in sensor['measurements'] }
@@ -500,6 +522,21 @@ class PASCOBLEDevice():
 
         except:
             raise self.SensorSetupError
+
+
+    def detect_controlnode_devices(self):
+        """
+        Detect the devices that are attached
+
+        Args:
+
+        """
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
+
+        cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_DETECT_DEVICES ]
+        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def get_sensor_list(self):
@@ -652,7 +689,7 @@ class PASCOBLEDevice():
     async def _single_listen(self, service_id):
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
-        #await self._client.stop_notify(uuid) # TODO: may need to uncomment this
+        await self._client.stop_notify(uuid) # TODO: may need to uncomment this
 
 
     async def _notify_callback(self, handle: int, data: bytearray):
@@ -706,13 +743,18 @@ class PASCOBLEDevice():
                 self._airlink_sensor_id = data[1]
 
         # Reading device response
-        elif self._handle_service[handle] == 0:
+        elif self._handle_service[handle] == self.SENSOR_SERVICE_ID:
             # Received single data packet
             if (data[0] is self.GRSP_RESULT):
                 # Valid data 
                 if data[1] == 0x00:
                     if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
                         self._data_packet = data[3:]
+                    elif data[2] is self.GCMD_CUSTOM_CMD: # TODO: CONTROL NODE THINGS
+                        self._data_packet = data[3:]
+                        self._data_stack[self.SENSOR_SERVICE_ID] = self._data_packet
+                        auto_id_devices = await self._decode_packet(self.SENSOR_SERVICE_ID)
+                        print(auto_id_devices)
 
             # Get factory calibration
             elif (data[0] == 0x0A):
@@ -756,6 +798,21 @@ class PASCOBLEDevice():
         self._data_stack[sensor_id] = self._data_packet
         self._loop.run_until_complete(self._decode_data(sensor_id))
 
+
+    async def _decode_packet(self, sensor_id):
+        code_node_interfaces = 3
+        results = []
+
+        for i in range(code_node_interfaces):
+            byte_value = 0
+            for d in range(2):
+                if len(self._data_stack[sensor_id]):
+                    stack_value = self._data_stack[sensor_id].pop(0)
+                    byte_value += stack_value * (2**(8*d))
+                    result_value = byte_value
+            results.append(result_value)
+        
+        return results
 
     async def _decode_data(self, sensor_id):
         try:
@@ -1092,3 +1149,28 @@ class PASCOBLEDevice():
     class SensorSetupError(Exception):
         """Error setting the sensor parameters up"""
         pass
+
+
+
+def main():
+
+    device = PASCOBLEDevice()
+    found_devices = device.scan('Temperature')
+
+    if found_devices:
+        for i, ble_device in enumerate(found_devices):
+            print(f'{i}: {ble_device.name}')
+        
+        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+        device.connect(found_devices[int(selected_device)])
+    else:
+        print("No Devices Found")
+        exit(1)
+
+
+    while True:
+        print(device.read_data('Temperature'))
+
+
+if __name__ == "__main__":
+    main()

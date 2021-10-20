@@ -1,51 +1,17 @@
-from .character_library import get_icon, get_word, Icons
 from .pasco_ble_device import PASCOBLEDevice
 import time
 
-class CodeNodeDevice(PASCOBLEDevice):
-    GCMD_CODENODE_CMD = 0x37
-    CODENODE_CMD_SET_LED = 0X02
-    CODENODE_CMD_SET_LEDS = 0X03
-    CODENODE_CMD_SET_SOUND_FREQ = 0X04
 
-
-    def _limit(self, num, minimum, maximum):
-        """
-        Limits input number between minimum and maximum values.
-
-        Args:
-            num (int/float): input number
-            minimum (int): min number
-            maximum (int): max number
-        """
-        return max(min(num, maximum), minimum)
-
-
-    def set_led_in_array(self, x, y, intensity=128):
-        """
-        Set an individual LED on the 5x5 matrix
-
-        Args:
-            x (int): [0-4] column value (top to bottom)
-            y (int): [0-4] row value (left to right)
-            intensity (int): [0-255] brightness control of LED
-        """
-        if self.is_connected() is False:
-            raise self.DeviceNotConnected()
-
-        if (x and type(x) is not int) or (y and type(y) is not int):
-            raise self.InvalidParameter
-        if (x < 0 or x > 4) or (y < 0  or y > 4):
-            raise self.InvalidParameter
-        if intensity and type(intensity) not in (int, float):
-            raise self.InvalidParameter
-
-        led_index = 20 - (y * 5) + x # Converts xy position to LED index
-        led_intensity = self._limit(intensity, 0, 255)
-
-        cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LED, led_index, led_intensity ]
-        self._send_command(self.SENSOR_SERVICE_ID, cmd)
-        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
+class ControlNodeDevice(PASCOBLEDevice):
+    # Control Node commands
+    CTRLNODE_CMD_SET_SERVO = 3              # Enables PWM to servo
+    CTRLNODE_CMD_SET_STEPPER = 4            # Enables stepper motor
+    CTRLNODE_CMD_SET_SIGNALS = 5            # Sets motor control signals directly
+    CTRLNODE_CMD_XFER_ACCESSORY = 6         # Write I2C accessory and read response
+    CTRLNODE_CMD_READ_LINE_FOLLOWER = 7     # Read the line follower accessory
+    CTRLNODE_CMD_GET_STEPPER_INFO = 8       # Get stepper remaining distance and remaining angular velocity to accelerate to
+    CTRLNODE_CMD_STOP_ACCESSORIES = 9       # Turn off all steppers, servos, and accessories
+    CTRLNODE_CMD_SET_BEEPER = 10            # Set beeper frequency
 
 
     def set_leds_in_array(self, xy_list=[], intensity=128):
@@ -186,3 +152,28 @@ class CodeNodeDevice(PASCOBLEDevice):
         self.set_rgb_led(0,0,0)
         self.set_leds_in_array([], 0)
         self.set_sound_frequency(0)
+
+
+def main():
+    
+    device = ControlNodeDevice()
+
+    found_devices = device.scan()
+
+    if len(found_devices) == 0:
+        print("No devices found")
+        exit(1)
+
+    print('Devices Found')
+    for i, ble_device in enumerate(found_devices):
+        #print(ble_device.address)
+        print(f'{i}: {ble_device.name}')
+
+    # Auto connect if only one sensor found
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    ble_device = found_devices[int(selected_device)]
+    device.connect(ble_device)
+
+
+if __name__ == "__main__":
+    main()

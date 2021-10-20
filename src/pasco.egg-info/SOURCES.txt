@@ -6,6 +6,7 @@ setup.cfg
 src/pasco/__init__.py
 src/pasco/character_library.py
 src/pasco/code_node_device.py
+src/pasco/control_node_device.py
 src/pasco/datasheets.xml
 src/pasco/pasco_ble_device.py
 src/pasco.egg-info/PKG-INFO

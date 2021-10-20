@@ -1,3 +1,5 @@
+[![Python](https://img.shields.io/badge/python-3.7%20%7C%203.8-blue)](https://pypi.org/project/pasco/)
+
 # README
 
 This library allows PASCO Wireless sensors to work with Python
