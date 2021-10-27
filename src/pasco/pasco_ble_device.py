@@ -19,7 +19,13 @@ class PASCOBLEDevice():
 
     SEND_CMD_CHAR_ID = 2
     RECV_CMD_CHAR_ID = 3
+    RECV_PERIODIC_CHAR_ID = 4
     SEND_ACK_CHAR_ID = 5
+
+
+    GCMD_SET_SAMPLE_PERIOD = 0X01
+    GCMD_START_SAMPLING = 0X06
+    GCMD_STOP_SAMPLING = 0X07
 
     GCMD_CUSTOM_CMD = 0x37
     GCMD_CONTROL_NODE_CMD = 0x37
@@ -431,7 +437,7 @@ class PASCOBLEDevice():
         uuid = self._set_uuid(service_id, self.SEND_ACK_CHAR_ID)
 
         try:
-            self._loop.run_until_complete(self._write(uuid, command))
+            self._write(uuid, command)
         except:
             raise self.CommunicationError
 
@@ -441,7 +447,7 @@ class PASCOBLEDevice():
         #ble_write_data = f'WRITE# {data_to_write} to {uuid}'
         #print(ble_write_data)
 
-        self._loop.run_until_complete(self._client.write_gatt_char(uuid, bytes(data_to_write)))
+        self._loop.create_task(self._client.write_gatt_char(uuid, bytes(data_to_write)))
 
 
     def _initialize_sensor_values(self):
@@ -695,6 +701,14 @@ class PASCOBLEDevice():
                 await self._client.stop_notify(uuid)
         except:
             raise ConnectionError
+
+
+    async def start_listener(self, service_id):
+        uuid = self._set_uuid(service_id, self.RECV_PERIODIC_CHAR_ID)
+        await self._client.start_notify(uuid, self._notify_callback)
+
+        while self._client.is_connected:
+            await asyncio.sleep(0.01)
 
 
     async def _notify_callback(self, handle: int, data: bytearray):
@@ -1105,6 +1119,47 @@ class PASCOBLEDevice():
             self._factory_cal_params = {}
             """
 
+    def start_periodic(self, sensor_name, seconds, ext_callback_fn):
+        """
+        Start periodic sampling (continuous) for selected channels
+
+        Args:
+            seconds: in microseconds or set to 0 to disable
+        """
+
+        sample_size = self._device_measurements[0]['total_data_size'] if self._airlink_sensor_id is not None else 0
+
+        try:
+            #print(seconds)
+            useconds = int(seconds * 1000000) #Convert to microseconds
+            sample_rate = [ self.GCMD_SET_SAMPLE_PERIOD,
+                    useconds & 0xFF, useconds>>8 & 0XFF, useconds>>16 & 0XFF, useconds>>24 & 0XFF,
+                    sample_size, 0X00 ]
+            #print(sample_rate)
+            start_cmd = [ self.GCMD_START_SAMPLING ]
+            #print(start_cmd)
+
+            #print(self._device_sensors)
+            sensor = self._device_sensors[sensor_name]
+            #for i, sensor in self._device_sensors.items():
+            #    print(i)
+            #print(sensor)
+            if sensor['type'] == 'Pasport':
+                service_id = sensor['id'] + 1
+                self._send_command(service_id, sample_rate)
+                self._send_command(service_id, start_cmd)
+
+            synchronous_functions = [
+                self.start_listener(sensor['id']+1) for sensor_list, sensor in self.device_sensors.items() if sensor['type'] == 'Pasport'
+            ]
+            
+            synchronous_functions.append(ext_callback_fn)
+
+            self._loop.run_until_complete(asyncio.wait(synchronous_functions))
+
+        except:
+            print("Could not start periodic sampling")
+
 
     class Error(Exception):
         """Base class for other exceptions"""
@@ -1154,6 +1209,19 @@ class PASCOBLEDevice():
         pass
 
 
+#############################################################
+# Main Function
+#############################################################
+async def period_callback_fn(device: PASCOBLEDevice, sample_period = 1):
+    """
+    This function allows you to manipulate the periodic data
+    """
+    while True:
+        await asyncio.sleep(sample_period)
+        print(device.data_results)
+
+
+
 def main():
 
     device = PASCOBLEDevice()
@@ -1170,10 +1238,10 @@ def main():
         exit(1)
 
     print(device.get_measurement_list())
-    while True:
-        print(f"Temp: {device.read_data('Temperature')}")
-        time.sleep(0.5)
 
+    sample_period = 0.5
+    sensor_name = 'WirelessTemperatureSensor'
+    device.start_periodic(sensor_name, sample_period, period_callback_fn(device, sample_period))
 
 if __name__ == "__main__":
     main()
