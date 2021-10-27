@@ -1,6 +1,7 @@
 import asyncio
 import math
 import os
+import platform
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -35,7 +36,7 @@ class PASCOBLEDevice():
         """
         Create a PASCO BLE Device object
         """
-    
+
         self._client = None
         self._address = None
         self._name = None
@@ -352,7 +353,7 @@ class PASCOBLEDevice():
             Two' complement of an integer value
         """
         bit_len = byte_len * 8
-        if value > (1<<(bit_len-1)):
+        if value and value > (1<<(bit_len-1)):
             return value-(1<<bit_len)
         return value
 
@@ -501,7 +502,7 @@ class PASCOBLEDevice():
                     self._sensor_data[sensor['id']] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor['id']].items() }
 
                     # TODO: Factory Calibration check
-                    self.read_factory_cal(sensor['id'])
+                    #self.read_factory_cal(sensor['id'])
             
                 elif sensor['type'] == 'Pasport' and sensor['sensor_id'] == "":
                     # TODO: ControlNode stuff
@@ -688,8 +689,12 @@ class PASCOBLEDevice():
 
     async def _single_listen(self, service_id):
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
-        await self._client.start_notify(uuid, self._notify_callback)
-        await self._client.stop_notify(uuid) # TODO: may need to uncomment this
+        try:
+            await self._client.start_notify(uuid, self._notify_callback)
+            if (platform.system() == "Darwin"):
+                await self._client.stop_notify(uuid)
+        except:
+            raise ConnectionError
 
 
     async def _notify_callback(self, handle: int, data: bytearray):
@@ -709,7 +714,6 @@ class PASCOBLEDevice():
                 self._data_ack_counter[sensor_id] += 1
 
                 self._loop.create_task(self._decode_data(sensor_id))
-                #self.send_data()
 
                 # Send acknowledgement package
                 if (self._data_ack_counter[sensor_id] > 8):
@@ -754,7 +758,7 @@ class PASCOBLEDevice():
                         self._data_packet = data[3:]
                         self._data_stack[self.SENSOR_SERVICE_ID] = self._data_packet
                         auto_id_devices = await self._decode_packet(self.SENSOR_SERVICE_ID)
-                        print(auto_id_devices)
+                        #print(auto_id_devices)
 
             # Get factory calibration
             elif (data[0] == 0x0A):
@@ -792,7 +796,6 @@ class PASCOBLEDevice():
 
         self._send_command(service_id, one_shot_cmd)
         self._notify_sensor_id = sensor_id
-        time.sleep(0.2) # TODO: Remove this artificial sleep
         self._loop.run_until_complete(self._single_listen(service_id))
 
         self._data_stack[sensor_id] = self._data_packet
@@ -1151,11 +1154,10 @@ class PASCOBLEDevice():
         pass
 
 
-
 def main():
 
     device = PASCOBLEDevice()
-    found_devices = device.scan('Temperature')
+    found_devices = device.scan()
 
     if found_devices:
         for i, ble_device in enumerate(found_devices):
@@ -1167,9 +1169,10 @@ def main():
         print("No Devices Found")
         exit(1)
 
-
+    print(device.get_measurement_list())
     while True:
-        print(device.read_data('Temperature'))
+        print(f"Temp: {device.read_data('Temperature')}")
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":
