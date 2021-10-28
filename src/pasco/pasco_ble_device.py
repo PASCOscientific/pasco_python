@@ -32,6 +32,8 @@ class PASCOBLEDevice():
 
     WIRELESS_RMS_START = [0X37, 0X01, 0X00]
 
+    COMMAND_PROCESS_TIME = 0.05             # Time to wait after sending a read command
+
     def __init__(self):
         """
         Create a PASCO BLE Device object
@@ -740,7 +742,6 @@ class PASCOBLEDevice():
 
                 # Error receiving data
                 elif data[1] == 0x01:
-                    #print(f'Error on channel # {sensor_id}')
                     pass
 
             elif (data[0] == self.GEVT_SENSOR_ID):
@@ -796,6 +797,7 @@ class PASCOBLEDevice():
 
         self._send_command(service_id, one_shot_cmd)
         self._notify_sensor_id = sensor_id
+        time.sleep(self.COMMAND_PROCESS_TIME) # Wait for the sensor to proccess the command
         self._loop.run_until_complete(self._single_listen(service_id))
 
         self._data_stack[sensor_id] = self._data_packet
@@ -883,7 +885,6 @@ class PASCOBLEDevice():
         input_value = None
 
         if m['Type'] == 'RawDigital' and self._sensor_data[sensor_id][measurement_id] == None:
-            # TODO: #print('the raw value is not there')
             pass
 
         if 'Inputs' in m:
@@ -1040,11 +1041,15 @@ class PASCOBLEDevice():
                     raw_equation = raw_equation.replace('sqrt', 'math.sqrt')
                     raw_equation = raw_equation.replace('atan2', 'math.atan2')
                     raw_equation = raw_equation.replace('log', 'math.log10')
-                    result_value = eval(raw_equation)
+
+                    if "None" in raw_equation:
+                        result_value = None
+                    else:
+                        result_value = eval(raw_equation)
 
                 except:
                     # equation likely has a string that we don't recognize yet
-                    raise self.InvalidEquation()
+                    raise self.InvalidEquation("Error decoding the raw data")
 
         return result_value
 
@@ -1155,24 +1160,30 @@ class PASCOBLEDevice():
 
 
 def main():
+    my_sensor = PASCOBLEDevice()
+    found_devices = my_sensor.scan()
 
-    device = PASCOBLEDevice()
-    found_devices = device.scan()
+    print('\nDevices Found')
+    for _, ble_device in enumerate(found_devices):
+        display_name = ble_device.name.split('>')
+        print(f'{_}: {display_name[0]}')
 
-    if found_devices:
-        for i, ble_device in enumerate(found_devices):
-            print(f'{i}: {ble_device.name}')
-        
-        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-        device.connect(found_devices[int(selected_device)])
-    else:
-        print("No Devices Found")
-        exit(1)
+    # Auto connect if only one sensor found
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    ble_device = found_devices[int(selected_device)]
 
-    print(device.get_measurement_list())
+    my_sensor.connect(ble_device)
+    
+    #my_sensor.COMMAND_PROCESS_TIME = 5
+    measurements = (my_sensor.get_measurement_list())
+
     while True:
-        print(f"Temp: {device.read_data('Temperature')}")
-        time.sleep(0.5)
+        for k in measurements:
+            print(k, ': ', end='')
+            print(my_sensor.read_data(k))
+
+    #time.sleep(1)
+    #my_sensor.disconnect()
 
 
 if __name__ == "__main__":
