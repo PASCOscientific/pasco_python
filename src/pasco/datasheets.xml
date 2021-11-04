@@ -1469,7 +1469,7 @@
         <Measurement ID="2" NameTag="Z" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
         <Measurement ID="3" NameTag="AngularVelocityx" UnitType="degps" Type="FactoryCal" Inputs="0" Params="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvelx" SymbolTag="omegaLx" Visible="1"/>
         <Measurement ID="4" NameTag="AngularVelocityy" UnitType="degps" Type="FactoryCal" Inputs="1" Params="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvely" SymbolTag="omegaLy" Visible="1"/>
-        <Measurement ID="5" NameTag="AngularVelocityz" UnitType="degps" Type="FactoryCal" Inputs="2" Paramsx="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvelz" SymbolTag="omegaLz" Visible="1"/>
+        <Measurement ID="5" NameTag="AngularVelocityz" UnitType="degps" Type="FactoryCal" Inputs="2" Params="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvelz" SymbolTag="omegaLz" Visible="1"/>
       </Sensor>
       <Sensor ID="2030" Tag="WirelessLightSensor1" DefaultRate="1Hz" IconID="132" MaxRate="2Hz" Model="PS-3213">
         <Measurement ID="0" NameTag="R" UnitType="percent" Type="LinearConv" Inputs="9" Params="0.0015258,0" Internal="1" MeasType="LightIntensity" Precision="1" Minimum="0" Maximum="100" Visible="1" SymbolTag="r"/>

@@ -51,7 +51,7 @@ class PASCOBLEDevice():
 
         self._device_sensors = []
         self._device_measurements = {}
-        self._handle_service = {}
+        self._handle_service = {} # Array to lookup BLE service id with the handle
         self._data_stack = {}
         self._data_packet = []
         self._sensor_data = {}
@@ -815,7 +815,7 @@ class PASCOBLEDevice():
                     stack_value = self._data_stack[sensor_id].pop(0)
                     byte_value += stack_value * (2**(8*d))
                     result_value = byte_value
-            results.append(result_value)
+                    results.append(result_value)
         
         return results
 
@@ -1178,11 +1178,9 @@ def main():
     measurements = (my_sensor.get_measurement_list())
 
     while True:
-        for k in measurements:
-            print(k, ': ', end='')
-            print(my_sensor.read_data(k))
+        for m in measurements:
+            print(f'{m} : {my_sensor.read_data(m)}')
 
-    #time.sleep(1)
     #my_sensor.disconnect()
 
 
