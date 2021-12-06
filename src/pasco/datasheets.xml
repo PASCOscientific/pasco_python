@@ -1553,9 +1553,9 @@
         <Measurement ID="11" NameTag="RawWindSpeed" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
       </Sensor>
       <Sensor ID="2038" Tag="WirelessGPSSensor" DefaultRate="1Hz" IconID="2038" MaxRate="1Hz" Model="PS-3209" NoDefaultMeas="1">
-        <Measurement ID="0" NameTag="RawLatitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="1"/>
-        <Measurement ID="1" NameTag="RawLongitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="1"/>
-        <Measurement ID="2" NameTag="RawAltitude" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="0" NameTag="RawLatitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="0" Visible="1"/>
+        <Measurement ID="1" NameTag="RawLongitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="0" Visible="1"/>
+        <Measurement ID="2" NameTag="RawAltitude" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="0" Visible="1"/>
         <Measurement ID="3" NameTag="RawSpeed" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="4" NameTag="SatelliteCount" UnitType="Unitless" Type="RawDigital" MeasType="Count" ShortNameTag="SatCount" SymbolTag="Count" Precision="0" DataSize="1" Visible="1"/>
         <Measurement ID="5" NameTag="Latitude" UnitType="deg" UnitGroup="GPS" Equation="[0]*0.000001" MeasType="Latitude" ShortNameTag="Lat" SymbolTag="Lat" DefaultUnit="deg" Precision="5" Minimum="-90" Maximum="90" TypicalMin="-70" TypicalMax="70" Visible="1" IsDefaultMeas="1"/>

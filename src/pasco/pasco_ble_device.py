@@ -262,6 +262,8 @@ class PASCOBLEDevice():
 
         uuid = self._set_uuid(self.SENSOR_SERVICE_ID, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
+        if (platform.system() == "Darwin"):
+            await self._client.stop_notify(uuid)
 
 
     def keepalive(self):
