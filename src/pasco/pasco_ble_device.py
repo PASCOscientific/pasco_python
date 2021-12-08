@@ -2,7 +2,6 @@ import asyncio
 import math
 import nest_asyncio
 import os
-import platform
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -65,6 +64,8 @@ class PASCOBLEDevice():
         self._notify_sensor_id = None
         self._data_results = {}
         self._measurement_sensor_ids = {}
+
+        self._notifications_queue = []
 
         # Load Datasheet
         package_path = os.path.dirname(os.path.abspath(__file__))
@@ -262,8 +263,7 @@ class PASCOBLEDevice():
 
         uuid = self._set_uuid(self.SENSOR_SERVICE_ID, self.RECV_CMD_CHAR_ID)
         await self._client.start_notify(uuid, self._notify_callback)
-        if (platform.system() == "Darwin"):
-            await self._client.stop_notify(uuid)
+        self._notifications_queue.append(uuid)
 
 
     def keepalive(self):
@@ -424,6 +424,7 @@ class PASCOBLEDevice():
 
         try:
             self._write(uuid, command)
+            time.sleep(self.COMMAND_PROCESS_TIME) # Wait for the sensor to proccess the command
         except:
             raise self.CommunicationError
 
@@ -698,9 +699,13 @@ class PASCOBLEDevice():
     async def _single_listen(self, service_id):
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
         try:
-            await self._client.start_notify(uuid, self._notify_callback)
-            if (platform.system() == "Darwin"):
+            if uuid not in self._notifications_queue:
                 await self._client.stop_notify(uuid)
+                self._notifications_queue.remove(uuid)
+            else:
+                await self._client.start_notify(uuid, self._notify_callback)
+                self._notifications_queue.append(uuid)
+
         except:
             raise ConnectionError
 
@@ -803,7 +808,6 @@ class PASCOBLEDevice():
 
         self._send_command(service_id, one_shot_cmd)
         self._notify_sensor_id = sensor_id
-        time.sleep(self.COMMAND_PROCESS_TIME) # Wait for the sensor to proccess the command
         self._loop.run_until_complete(self._single_listen(service_id))
 
         self._data_stack[sensor_id] = self._data_packet
@@ -888,7 +892,6 @@ class PASCOBLEDevice():
     def _get_measurement_value(self, sensor_id, measurement_id):
         m = self._device_measurements[sensor_id][measurement_id]
         result_value = None
-        input_value = None
 
         if m['Type'] == 'RawDigital' and self._sensor_data[sensor_id][measurement_id] == None:
             pass
@@ -920,36 +923,38 @@ class PASCOBLEDevice():
             # Single Input
             else:
                 need_input = int(m['Inputs'])
+                input_value = None
+
                 if self._sensor_data[sensor_id][need_input] is not None:
                     input_value = self._sensor_data[sensor_id][need_input]
                 else:
                     input_value = self._get_measurement_value(sensor_id, need_input)
 
-        if (input_value is not None):
-            if m['Type'] == 'UserCal':
-                params = m['Params'].split(',')
-                result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
+                if (input_value is not None):
+                    if m['Type'] == 'UserCal':
+                        params = m['Params'].split(',')
+                        result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
 
-            elif m['Type'] == 'FactoryCal':
-                if 'FactoryCalParams' in m and len(m['FactoryCalParams']) == 4:
-                    params = m['FactoryCalParams']
-                else:
-                    params = m['Params'].split(',')
-                result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
+                    elif m['Type'] == 'FactoryCal':
+                        if 'FactoryCalParams' in m and len(m['FactoryCalParams']) == 4:
+                            params = m['FactoryCalParams']
+                        else:
+                            params = m['Params'].split(',')
+                        result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
 
-            elif m['Type'] == 'LinearConv':
-                params = m['Params'].split(',')
-                result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
+                    elif m['Type'] == 'LinearConv':
+                        params = m['Params'].split(',')
+                        result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
 
-            elif m['Type'] == 'Derivative':
-                if self._sensor_data_prev[sensor_id][m['Inputs']] != None:
-                    prev_input_value = self._sensor_data_prev[sensor_id][m['Inputs']]
-                    result_value = (input_value - prev_input_value) / 2
-            
-            elif m['Type'] == 'RotaryPos':
-                params = m['Params'].split(',')
-                m['Value'] += self._calc_rotary_pos(input_value, float(params[0]), float(params[1]))
-                result_value = m['Value']
+                    elif m['Type'] == 'Derivative':
+                        if self._sensor_data_prev[sensor_id][m['Inputs']] != None:
+                            prev_input_value = self._sensor_data_prev[sensor_id][m['Inputs']]
+                            result_value = (input_value - prev_input_value) / 2
+
+                    elif m['Type'] == 'RotaryPos':
+                        params = m['Params'].split(',')
+                        m['Value'] += self._calc_rotary_pos(input_value, float(params[0]), float(params[1]))
+                        result_value = m['Value']
 
         if ('Equation' in m):
             raw_equation = m['Equation']
@@ -968,7 +973,6 @@ class PASCOBLEDevice():
                 else:
                     replace_with = str(self._get_measurement_value(sensor_id, eVarKey))
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
-
 
             paranthetic_vals = list(self.parenthetic_contents(raw_equation))
 

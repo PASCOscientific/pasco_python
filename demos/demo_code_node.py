@@ -1,11 +1,12 @@
 from pasco.code_node_device import CodeNodeDevice
 from pasco.character_library import Icons
+from random import random
 
 
 def main():
     # Connect to PASCO Device
     p_code_node = CodeNodeDevice()
-    p_code_node.connect_by_id('020-122')
+    p_code_node.connect_by_id('//code.Node')
 
     p_code_node.reset()
 
@@ -15,6 +16,14 @@ def main():
         p_code_node.show_image_in_array(Icons().smile)
         p_code_node.show_image_in_array(Icons().sad)
 
+    measurements = p_code_node.get_measurement_list()
+
+    print(measurements)
+
+    for m in measurements:
+        #p_code_node.set_rgb_led(int(10*random()),int(10*random()),int(10*random()))
+        print(p_code_node.read_data(m))
+ 
     p_code_node.reset()
 
     p_code_node.set_sound_frequency(600)

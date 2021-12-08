@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pasco
-Version: 0.3.0
+Version: 0.3.4
 Summary: PASCO Python API for Wireless Sensors
 Home-page: UNKNOWN
 Author: Waqas Saeed
@@ -13,7 +13,7 @@ Classifier: License :: Other/Proprietary License
 Classifier: Operating System :: Microsoft :: Windows
 Classifier: Operating System :: MacOS
 Classifier: Operating System :: Unix
-Requires-Python: !=3.10,!=3.9,>=3.7
+Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 License-File: LICENSE
 
