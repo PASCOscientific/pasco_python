@@ -700,11 +700,11 @@ class PASCOBLEDevice():
         uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
         try:
             if uuid not in self._notifications_queue:
-                await self._client.stop_notify(uuid)
-                self._notifications_queue.remove(uuid)
-            else:
                 await self._client.start_notify(uuid, self._notify_callback)
                 self._notifications_queue.append(uuid)
+            else:
+                await self._client.stop_notify(uuid)
+                self._notifications_queue.remove(uuid)
 
         except:
             raise ConnectionError
@@ -1009,27 +1009,29 @@ class PASCOBLEDevice():
                 dewpoint_eqn = dewpoint_eqn.replace(')','')
                 dewpoint_vals = dewpoint_eqn.split(',')
 
-                temp_c = float(dewpoint_vals[0])
-                relative_humidity = float(dewpoint_vals[1])
-                vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
-                vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
+                if (dewpoint_vals[0] != 'None'):
+                    temp_c = float(dewpoint_vals[0])
+                    relative_humidity = float(dewpoint_vals[1])
+                    vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
+                    vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
 
-                result_value = (-443.22 + 237.7 * math.log(vapor_pressure_actual)) / (-math.log(vapor_pressure_actual) + 19.08)
+                    result_value = (-443.22 + 237.7 * math.log(vapor_pressure_actual)) / (-math.log(vapor_pressure_actual) + 19.08)
 
             elif raw_equation.startswith('windchill'):
                 windchill_eqn = raw_equation.replace('windchill(','')
                 windchill_eqn = windchill_eqn.replace(')','')
                 windchill_vals = windchill_eqn.split(',')
 
-                temp_f = (9 * float(windchill_vals[0]) / 5) + 32
-                wind_mph = float(windchill_vals[1]) * 2.237
+                if windchill_vals[0] != 'None' and windchill_vals[1] != 'None':
+                    temp_f = (9 * float(windchill_vals[0]) / 5) + 32
+                    wind_mph = float(windchill_vals[1]) * 2.237
 
-                if( wind_mph < 3.0 or temp_f > 50.0 ):
-                    wind_chill_f = temp_f
-                else:
-                    wind_chill_f = 35.74 + 0.6215 * temp_f - 35.75 * pow( wind_mph, 0.16 ) + 0.4275 * temp_f * pow( wind_mph, 0.16 )
+                    if( wind_mph < 3.0 or temp_f > 50.0 ):
+                        wind_chill_f = temp_f
+                    else:
+                        wind_chill_f = 35.74 + 0.6215 * temp_f - 35.75 * pow( wind_mph, 0.16 ) + 0.4275 * temp_f * pow( wind_mph, 0.16 )
 
-                result_value = 5 * (wind_chill_f - 32) / 9
+                    result_value = 5 * (wind_chill_f - 32) / 9
             
             elif raw_equation.startswith('heatindex'):
                 heatindex_eqn = raw_equation.replace('heatindex(','')
