@@ -48,3 +48,5 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Pypi package files
+src/pasco.egg-info/

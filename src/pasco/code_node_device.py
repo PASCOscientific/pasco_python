@@ -104,9 +104,9 @@ class CodeNodeDevice(PASCOBLEDevice):
             (blue and type(blue) not in (int, float))):
             raise self.InvalidParameter
 
-        led_r = self._limit(red, 0, 255)
-        led_g = self._limit(green, 0, 255)
-        led_b = self._limit(blue, 0, 255)
+        led_r = int(self._limit(red, 0, 255))
+        led_g = int(self._limit(green, 0, 255))
+        led_b = int(self._limit(blue, 0, 255))
 
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS, led_r, led_g, led_b, 0X80, 0X00 ]
         self._send_command(self.SENSOR_SERVICE_ID, cmd)
