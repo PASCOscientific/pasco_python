@@ -1,5 +1,4 @@
-from pasco.code_node_device import CodeNodeDevice
-from pasco.character_library import Icons
+from pasco import CodeNodeDevice, Icons
 from random import random
 
 

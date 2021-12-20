@@ -35,7 +35,7 @@ class PASCOBLEDevice():
 
     WIRELESS_RMS_START = [0X37, 0X01, 0X00]
 
-    COMMAND_PROCESS_TIME = 0.05             # Time to wait after sending a read command
+    TIME_DELAY = 0.05                       # Time to wait after sending a read command
 
     def __init__(self):
         """
@@ -424,7 +424,7 @@ class PASCOBLEDevice():
 
         try:
             self._write(uuid, command)
-            time.sleep(self.COMMAND_PROCESS_TIME) # Wait for the sensor to proccess the command
+            time.sleep(self.TIME_DELAY) # Wait for the sensor to proccess the command
         except:
             raise self.CommunicationError
 
@@ -1186,14 +1186,14 @@ def main():
 
     my_sensor.connect(ble_device)
     
-    #my_sensor.COMMAND_PROCESS_TIME = 5
+    #my_sensor.TIME_DELAY = 5
     measurements = (my_sensor.get_measurement_list())
 
-    while True:
+    for i in range(100):
         for m in measurements:
             print(f'{m} : {my_sensor.read_data(m)}')
 
-    #my_sensor.disconnect()
+    my_sensor.disconnect()
 
 
 if __name__ == "__main__":
