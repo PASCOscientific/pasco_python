@@ -6,7 +6,7 @@ import re
 import time
 import xml.etree.ElementTree as ET
 
-from bleak import BleakClient, discover
+from bleak import BleakClient, BleakScanner
 from bleak.backends.device import BLEDevice
 from uuid import UUID
 
@@ -172,7 +172,7 @@ class PASCOBLEDevice():
     async def _async_scan(self, pasco_device_names):
         found_devices = []
         
-        bleak_devices = await discover() #returns array of all devices found via bluetooth scan
+        bleak_devices = await BleakScanner.discover() #returns array of all devices found via bluetooth scan
 
         for ble_device in bleak_devices:
             for pasco_device_name in pasco_device_names:
