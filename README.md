@@ -10,7 +10,7 @@ For project examples, view our [pasco_python_examples repository](https://github
 
 # How do I get started?
 
-To install the package into your Python environment
+To install the package into your Python environment, type this into your Terminal
 
 ```
 pip install pasco
@@ -19,7 +19,7 @@ pip install pasco
 
 In your project file, import the `PASCOBLEDevice` class and/or the `CodeNodeDevice` class.
 
-To connect to a regular Wireless Sensor
+To connect to a regular wireless sensor
 
 ```
 from pasco import PASCOBLEDevice
@@ -34,6 +34,7 @@ from pasco import CodeNodeDevice, Icons
 # Compatible Sensors
 
 - /\/code.Node
+- Smart Cart
 - Wireless Acceleration Altimter
 - Wireless CO2
 - Wireless Conductivity
@@ -86,14 +87,14 @@ Each "sensor" can have multiple measurements
 `device = PASCOBLEDevice()` Create a Bluetooth device object  
 `device.scan(sensor_name_filter: string [optional])` Scan for available bluetooth devices. Returns a list of available devices  
 `device.connect(ble_device: BLEDevice)` Connect to a device using the object returned from the scan command.  
-`device.connect_by_id(pasco_device_id: string)` Connect to a device using the name returned from the scan command.  
+`device.connect_by_id(pasco_device_id: string)` Connect to a device using the 6 digit ID printed on the sensor.  
 `device.disconnect()` Disconnect from a device  
 `device.is_connected` Returns true/false to tell device connection state  
 `device.get_sensor_list()` Get a list of sensors that a device has  
 `device.get_measurement_list(sensor_name: string [optional])` Returns all the measurements that a device has  
 `device.read_data(measurement: string)` Get a single reading from a single measurement  
 `device.read_data_list(measurements: List[string])` Get a list of readings for multiple measurements  
-`device.get_measurement_unit(measurement)` Get the default units for a single measurement  
+`device.get_measurement_unit(measurement: string)` Get the default units for a single measurement  
 `device.get_measurement_unit_list(measurements: List[string])` Get a list of default units for multiple measurements
 
 PASCO's Bluetooth sensors will turn off after 5 minutes of no activity. To keep the device on, call the `device.keepalive()` method. This will keep the connection active without requesting any new data.
@@ -332,18 +333,14 @@ Connect to a Wireless Temperature Sensor and get one reading:
 
 from pasco import PASCOBLEDevice
 
-def main():
-    temp_sensor = PASCOBLEDevice()
-    temp_sensor.connect_by_id('055-808')
 
-    temp_value = temp_sensor.read_data('Temperature')
-    print(temp_value)
+temp_sensor = PASCOBLEDevice()
+temp_sensor.connect_by_id('055-808')
 
-    temp_sensor.disconnect()
+temp_value = temp_sensor.read_data('Temperature')
+print(temp_value)
 
-
-if __name__ == "__main__":
-    main()
+temp_sensor.disconnect()
 
 ```
 
@@ -353,19 +350,15 @@ if __name__ == "__main__":
 
 from pasco import PASCOBLEDevice
 
-def main():
-    temp_sensor = PASCOBLEDevice()
-    temp_sensor.connect_by_id('055-808')
 
-    temp_value = temp_sensor.read_data('Temperature')
-    temp_units = temp_sensor.get_measurement_unit('Temperature')
-    print(f'{temp_value} {temp_units}')
+temp_sensor = PASCOBLEDevice()
+temp_sensor.connect_by_id('055-808')
 
-    temp_sensor.disconnect()
+temp_value = temp_sensor.read_data('Temperature')
+temp_units = temp_sensor.get_measurement_unit('Temperature')
+print(f'{temp_value} {temp_units}')
 
-
-if __name__ == "__main__":
-    main()
+temp_sensor.disconnect()
 
 ```
 
@@ -377,31 +370,27 @@ Scan for a sensor and get the current temperature. In this example we can use a 
 
 from pasco import PASCOBLEDevice
 
-def main():
-    my_sensor = PASCOBLEDevice()
-    found_devices = my_sensor.scan()
 
-    print('\nDevices Found')
-    for i, ble_device in enumerate(found_devices):
-        display_name = ble_device.name.split('>')
-        print(f'{i}: {display_name[0]}')
+my_sensor = PASCOBLEDevice()
+found_devices = my_sensor.scan()
 
-    # Auto connect if only one sensor found
-    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+print('\nDevices Found')
+for i, ble_device in enumerate(found_devices):
+    display_name = ble_device.name.split('>')
+    print(f'{i}: {display_name[0]}')
 
-    ble_device = found_devices[int(selected_device)]
-    my_sensor.connect(ble_device)
+# Auto connect if only one sensor found
+selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
 
-    # Loop that will read/display the data 100 times
-    for i in range(100):
-        current_temp = my_sensor.read_data('Temperature')
-        print(f'The current temp is {current_temp}')
+ble_device = found_devices[int(selected_device)]
+my_sensor.connect(ble_device)
 
-    my_sensor.disconnect()
+# Loop that will read/display the data 100 times
+for i in range(100):
+    current_temp = my_sensor.read_data('Temperature')
+    print(f'The current temp is {current_temp}')
 
-
-if __name__ == "__main__":
-    main()
+my_sensor.disconnect()
 
 ```
 
@@ -413,55 +402,50 @@ We can also connect to multiple sensors. Here we are connecting to a /\/code.Nod
 
 from pasco import PASCOBLEDevice, CodeNodeDevice, Icons
 
-def main():
 
-    code_node_device = CodeNodeDevice()
-    found_devices = code_node_device.scan('//code.Node')
+code_node_device = CodeNodeDevice()
+found_devices = code_node_device.scan('//code.Node')
 
-    if found_devices:
-        for i, ble_device in enumerate(found_devices):
-            print(f'{i}: {ble_device.name}')
+if found_devices:
+    for i, ble_device in enumerate(found_devices):
+        print(f'{i}: {ble_device.name}')
 
-        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-        code_node_device.connect(found_devices[int(selected_device)])
-    else:
-        print("No Devices Found")
-        exit(1)
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    code_node_device.connect(found_devices[int(selected_device)])
+else:
+    print("No Devices Found")
+    exit(1)
 
-    force_accel_device = PASCOBLEDevice()
-    found_devices = force_accel_device.scan('Force')
+force_accel_device = PASCOBLEDevice()
+found_devices = force_accel_device.scan('Force')
 
-    if found_devices:
-        for i, ble_device in enumerate(found_devices):
-            print(f'{i}: {ble_device.name}')
+if found_devices:
+    for i, ble_device in enumerate(found_devices):
+        print(f'{i}: {ble_device.name}')
 
-        selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-        force_accel_device.connect(found_devices[int(selected_device)])
-    else:
-        print("No Devices Found")
-        exit(1)
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    force_accel_device.connect(found_devices[int(selected_device)])
+else:
+    print("No Devices Found")
+    exit(1)
 
-    code_node_device.reset()
-    light_on = False
+code_node_device.reset()
+light_on = False
 
-    for i in range (1000):
-        if force_accel_device.read_data('Force') > 10:
-            if light_on == False:
-                code_node_device.set_rgb_led(100,100,100)
-                code_node_device.set_sound_frequency(200)
-                code_node_device.show_image_in_array(Icons().alien)
-                light_on = True
-            else:
-                code_node_device.reset()
-                light_on = False
-            while force_accel_device.read_data('Force') > 10:
-                pass
+for i in range (1000):
+    if force_accel_device.read_data('Force') > 10:
+        if light_on == False:
+            code_node_device.set_rgb_led(100,100,100)
+            code_node_device.set_sound_frequency(200)
+            code_node_device.show_image_in_array(Icons().alien)
+            light_on = True
+        else:
+            code_node_device.reset()
+            light_on = False
+        while force_accel_device.read_data('Force') > 10:
+            pass
 
-    code_node_device.disconnect()
-    force_accel_device.disconnect()
-
-
-if __name__ == "__main__":
-    main()
+code_node_device.disconnect()
+force_accel_device.disconnect()
 
 ```
