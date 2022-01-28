@@ -330,7 +330,6 @@ Turn the 5x5 LED display, RGB LED and speaker off.
 Connect to a Wireless Temperature Sensor and get one reading:
 
 ```
-
 from pasco import PASCOBLEDevice
 
 
@@ -341,13 +340,11 @@ temp_value = temp_sensor.read_data('Temperature')
 print(temp_value)
 
 temp_sensor.disconnect()
-
 ```
 
 ## Example 1B: One shot read and display units
 
 ```
-
 from pasco import PASCOBLEDevice
 
 
@@ -367,7 +364,6 @@ temp_sensor.disconnect()
 Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement. We do not need to specify a device type. We will continuously read and display the result.
 
 ```
-
 from pasco import PASCOBLEDevice
 
 
@@ -391,15 +387,35 @@ for i in range(100):
     print(f'The current temp is {current_temp}')
 
 my_sensor.disconnect()
-
 ```
 
-## Example 3: Connect to multiple sensors
+## Example 3: Working with the /\/code.Node
+
+Below is a simple example that shows how to connect to a /\/code.Node, read a measurement and control an output.
+
+```
+from pasco.code_node_device import CodeNodeDevice
+
+
+code_node = CodeNodeDevice()
+code_node.connect_by_id('481-782')
+
+while code_node.read_data('Button1') == 0:
+    if code_node.read_data('Brightness') < 2:
+        code_node.set_rgb_led(100,100,100)
+    else:
+        code_node.set_rgb_led(0,0,0)
+
+code_node.scroll_text_in_array('Goodbye')
+
+code_node.reset()
+```
+
+## Example 4: Connect to multiple sensors
 
 We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
 
 ```
-
 from pasco import PASCOBLEDevice, CodeNodeDevice, Icons
 
 
@@ -447,5 +463,4 @@ for i in range (1000):
 
 code_node_device.disconnect()
 force_accel_device.disconnect()
-
 ```
