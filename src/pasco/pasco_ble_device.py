@@ -176,8 +176,8 @@ class PASCOBLEDevice():
 
         for ble_device in bleak_devices:
             for pasco_device_name in pasco_device_names:
-                if pasco_device_name in ble_device.name and ble_device not in found_devices:
-                    found_devices.append(ble_device)
+                if ble_device.name and pasco_device_name in ble_device.name and ble_device not in found_devices:
+                        found_devices.append(ble_device)
 
         return found_devices
 

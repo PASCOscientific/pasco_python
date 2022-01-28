@@ -394,7 +394,7 @@ my_sensor.disconnect()
 Below is a simple example that shows how to connect to a /\/code.Node, read a measurement and control an output.
 
 ```
-from pasco.code_node_device import CodeNodeDevice
+from pasco import CodeNodeDevice
 
 
 code_node = CodeNodeDevice()
