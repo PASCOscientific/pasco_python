@@ -49,7 +49,7 @@ class PASCOBLEDevice():
         self._interface_id = None
         self._airlink_sensor_id = None
         self._type = "BLE"
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.new_event_loop()
         self._data_ack_counter = {}
 
         self._device_sensors = []
@@ -177,7 +177,7 @@ class PASCOBLEDevice():
         for ble_device in bleak_devices:
             for pasco_device_name in pasco_device_names:
                 if ble_device.name and pasco_device_name in ble_device.name and ble_device not in found_devices:
-                        found_devices.append(ble_device)
+                    found_devices.append(ble_device)
 
         return found_devices
 

@@ -1,6 +1,6 @@
-from .character_library import get_icon, get_word, Icons
-from .pasco_ble_device import PASCOBLEDevice
+from . import get_icon, get_word, Icons, PASCOBLEDevice
 import time
+
 
 class CodeNodeDevice(PASCOBLEDevice):
     GCMD_CODENODE_CMD = 0x37
