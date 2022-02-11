@@ -1,4 +1,5 @@
-from . import get_icon, get_word, Icons, PASCOBLEDevice
+from .character_library import get_icon, get_word, Icons
+from .pasco_ble_device import PASCOBLEDevice
 import time
 
 
@@ -7,18 +8,6 @@ class CodeNodeDevice(PASCOBLEDevice):
     CODENODE_CMD_SET_LED = 0X02
     CODENODE_CMD_SET_LEDS = 0X03
     CODENODE_CMD_SET_SOUND_FREQ = 0X04
-
-
-    def _limit(self, num, minimum, maximum):
-        """
-        Limits input number between minimum and maximum values.
-
-        Args:
-            num (int/float): input number
-            minimum (int): min number
-            maximum (int): max number
-        """
-        return max(min(num, maximum), minimum)
 
 
     def set_led_in_array(self, x, y, intensity=128):

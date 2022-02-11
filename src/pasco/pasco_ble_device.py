@@ -52,7 +52,7 @@ class PASCOBLEDevice():
         self._loop = asyncio.new_event_loop()
         self._data_ack_counter = {}
 
-        self._device_sensors = []
+        self._sensors = []
         self._device_measurements = {}
         self._handle_service = {} # Array to lookup BLE service id with the handle
         self._data_stack = {}
@@ -140,7 +140,7 @@ class PASCOBLEDevice():
 
     @property
     def device_sensors(self):
-        return self._device_sensors
+        return self._sensors
 
 
     def scan(self, sensor_name_filter=None):
@@ -210,7 +210,7 @@ class PASCOBLEDevice():
             raise self.InvalidParameter
 
         if self._client is not None:
-            raise self.BLEAlreadyConnectedError()
+            raise self.BLEAlreadyConnectedError('Device already connected')
 
         self._client = BleakClient(ble_device.address)
 
@@ -218,7 +218,7 @@ class PASCOBLEDevice():
             self._loop.run_until_complete(self._async_connect())
             self.keepalive()
         except:
-            raise self.BLEConnectionError
+            raise self.BLEConnectionError('Could not connect to the sensor')
 
         else:
             self._set_device_params(ble_device)
@@ -296,9 +296,6 @@ class PASCOBLEDevice():
 
 
     async def _async_disconnect(self):
-        uuid = self._set_uuid(self.SENSOR_SERVICE_ID, self.RECV_CMD_CHAR_ID)
-
-        await self._client.stop_notify(uuid)
         await self._client.disconnect()       
 
 
@@ -389,6 +386,17 @@ class PASCOBLEDevice():
         
         return m * raw + b
 
+    def _limit(self, num, minimum, maximum):
+        """
+        Limits input number between minimum and maximum values.
+
+        Args:
+            num (int/float): input number
+            minimum (int): min number
+            maximum (int): max number
+        """
+        return max(min(num, maximum), minimum)
+
 
     def _calc_linear_params(self, raw, m, b):
         """
@@ -454,10 +462,13 @@ class PASCOBLEDevice():
 
 
     def _initialize_sensor_values(self):
+        
+        do_plug_detect = False
+
         try:
             interface = self._xml_root.find("./Interfaces/Interface[@ID='%s']" % self._interface_id)
 
-            device_sensors = [
+            self._setup_sensors = [
                 {
                     'id': int(c.get('ID')),
                     'name': c.get('NameTag'),
@@ -466,14 +477,29 @@ class PASCOBLEDevice():
                     'output_type': c.get('OutputType') if 'OutputType' in c.attrib else '',
                     'measurements': [],
                     'total_data_size': 0,
-                    'plug_detect': c.get('PlugDetect') if 'PlugDetect' in c.attrib else '',
+                    'plug_detect': int(c.get('PlugDetect')) if 'PlugDetect' in c.attrib else 0,
+                    'channel_id_tag': int(c.get('ChannelIDTag')) if 'ChannelIDTag' in c.attrib else '',
                     'factory_cal_ids': []
                 }
                 for c in interface.findall("./Channel")
             ]
-            
-            # Iterate over Channels in XML
-            for sensor in device_sensors:
+
+            for sensor in self._setup_sensors:
+                if sensor['type'] == 'Pasport' and sensor['sensor_id'] == "" and sensor['plug_detect'] == 1:
+                    do_plug_detect = True
+
+            if do_plug_detect:
+                self.detect_controlnode_devices()
+            else:
+                self.get_sensor_datasheet_info()
+        
+        except:
+            raise self.SensorSetupError
+
+
+    def get_sensor_datasheet_info(self):
+        try:
+            for sensor in self._setup_sensors:
                 sensor_data = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % str(sensor['sensor_id']))
                 if sensor_data:
                     sensor['name'] = sensor_data.get('Tag')
@@ -481,7 +507,7 @@ class PASCOBLEDevice():
                     sensor['factory_cal_ids'] = [m.get('ID') for m in sensor_data.findall("./Measurement[@Type='FactoryCal']")]
 
             # Iterate over Channels in XML
-            #for sensor in device_sensors:
+            for sensor in self._setup_sensors:
                 if sensor['type'] == 'Pasport' and sensor['sensor_id'] != "":
                     self._data_ack_counter[sensor['id']] = 0
                     self._data_stack[sensor['id']] = []
@@ -500,8 +526,8 @@ class PASCOBLEDevice():
                         if 'DataSize' in sensor_m:
                             sensor_m['DataSize'] = int(sensor_m['DataSize'])
                             sensor['total_data_size'] += sensor_m['DataSize']
-                        if 'Inputs' in sensor_m and sensor_m['Inputs'].isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
-                        if 'Precision' in sensor_m and sensor_m['Precision'].isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
+                        if 'Inputs' in sensor_m and str(sensor_m['Inputs']).isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
+                        if 'Precision' in sensor_m and str(sensor_m['Precision']).isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
                         #TODO: This is a temporary workaround for the code node cart
                         if sensor_m['NameTag'] == "RawCartPosition":
                             sensor_m['DataSize'] = 0
@@ -512,23 +538,13 @@ class PASCOBLEDevice():
 
                     # TODO: Factory Calibration check
                     #self.read_factory_cal(sensor['id'])
-            
-                elif sensor['type'] == 'Pasport' and sensor['sensor_id'] == "":
-                    # TODO: ControlNode stuff
-                    #print(sensor)
-
-                    if sensor['plug_detect'] == 1:
-                        sensor['']
-                        
-                        self.detect_controlnode_devices()
-                    pass
-
 
             # Initialize device measurement values
-            self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in device_sensors for measurement in sensor['measurements'] }
-            self._data_results = { m: None for sensor in device_sensors for m in sensor['measurements'] }
+            self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in self._setup_sensors for measurement in sensor['measurements'] }
+            self._data_results = { m: None for sensor in self._setup_sensors for m in sensor['measurements'] }
 
-            self._device_sensors = {sensor['name'] : sensor for sensor in device_sensors}
+            self._sensors = {sensor['name'] : sensor for sensor in self._setup_sensors}
+
 
         except:
             raise self.SensorSetupError
@@ -556,7 +572,7 @@ class PASCOBLEDevice():
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
 
-        return [sensor_name for sensor_name, sensor in self._device_sensors.items()]
+        return [sensor_name for sensor_name, sensor in self._sensors.items()]
 
 
     def get_measurement_list(self, sensor_name=None):
@@ -574,8 +590,8 @@ class PASCOBLEDevice():
 
         if sensor_name == None:
             measurement_list = [measurement for measurement in self._data_results]
-        elif sensor_name in self._device_sensors:
-            measurement_list = self._device_sensors[sensor_name]['measurements']
+        elif sensor_name in self._sensors:
+            measurement_list = self._sensors[sensor_name]['measurements']
         else:
             raise self.SensorNotFound
 
@@ -766,13 +782,22 @@ class PASCOBLEDevice():
                 if data[1] == 0x00:
                     if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
                         self._data_packet = data[3:]
-                    elif data[2] is self.GCMD_CUSTOM_CMD: # TODO: CONTROL NODE THINGS
+                    elif data[2] is self.GCMD_CUSTOM_CMD:
                         self._data_packet = data[3:]
                         self._data_stack[self.SENSOR_SERVICE_ID] = self._data_packet
-                        auto_id_devices = await self._decode_packet(self.SENSOR_SERVICE_ID)
-                        #print(auto_id_devices)
+                        auto_id_packet = await self._decode_auto_id_packet(self.SENSOR_SERVICE_ID)
 
-            # Get factory calibration
+                        i = 0
+                        if len(auto_id_packet):
+                            for sensor in self._setup_sensors:
+                                if sensor['sensor_id'] == '' and sensor['plug_detect'] == 1:
+                                    sensor['sensor_id'] = auto_id_packet[i] if auto_id_packet[i] != 0 else ''
+                                    i+=1
+                        
+                            self.get_sensor_datasheet_info()
+
+
+            # TODO: Get factory calibration
             elif (data[0] == 0x0A):
                 factory_cal_params = {data[1]: []}
                 #self._factory_cal_params[data[1]] = []
@@ -800,7 +825,7 @@ class PASCOBLEDevice():
     def _get_sensor_measurements(self, sensor_id):
         service_id = sensor_id + 1
 
-        for sensor_name, sensor in self._device_sensors.items():
+        for sensor_name, sensor in self._sensors.items():
             if sensor['id'] == sensor_id:
                 packet_size = sensor['total_data_size']
 
@@ -814,18 +839,23 @@ class PASCOBLEDevice():
         self._loop.run_until_complete(self._decode_data(sensor_id))
 
 
-    async def _decode_packet(self, sensor_id):
-        code_node_interfaces = 3
+    async def _decode_auto_id_packet(self, sensor_id):
+
+        plug_count = 0
+        for sensor in self._setup_sensors:
+            if sensor['plug_detect'] == 1:
+                plug_count += 1
+
         results = []
 
-        for i in range(code_node_interfaces):
-            byte_value = 0
-            for d in range(2):
-                if len(self._data_stack[sensor_id]):
+        if len(self._data_stack[sensor_id]):
+            for i in range(plug_count):
+                byte_value = 0
+                for d in range(2):
+                    #if len(self._data_stack[sensor_id]):
                     stack_value = self._data_stack[sensor_id].pop(0)
                     byte_value += stack_value * (2**(8*d))
-                    result_value = byte_value
-                    results.append(result_value)
+                results.append(byte_value)
         
         return results
 
