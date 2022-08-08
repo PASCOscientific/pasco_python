@@ -70,7 +70,6 @@ class ControlNodeDevice(PASCOBLEDevice):
             distance2 & 0xFF, distance2>>8 & 0XFF
         ]
         self._send_command(self.SENSOR_SERVICE_ID, cmd)
-        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def set_servos(self, ch_1_type, ch_1_angle, ch_2_type, ch_2_angle):
@@ -125,7 +124,6 @@ class ControlNodeDevice(PASCOBLEDevice):
             period2 & 0xFF, period2>>8 & 0XFF,
         ]
         self._send_command(self.SENSOR_SERVICE_ID, cmd)
-        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     # TODO: Test this
@@ -145,7 +143,6 @@ class ControlNodeDevice(PASCOBLEDevice):
             pwmValues[4], pwmValues[5], pwmValues[6], pwmValues[7]
         ]
         self._send_command(self.SENSOR_SERVICE_ID, cmd)
-        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def set_sound_frequency(self, frequency):
@@ -165,7 +162,6 @@ class ControlNodeDevice(PASCOBLEDevice):
 
         cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_SET_BEEPER, frequency & 0xFF, frequency>>8 & 0XFF ]
         self._send_command(self.SENSOR_SERVICE_ID, cmd)
-        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
 
 
     def reset(self):
