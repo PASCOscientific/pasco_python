@@ -6,7 +6,7 @@ import re
 import time
 import xml.etree.ElementTree as ET
 
-from bleak import BleakClient, BleakScanner
+from bleak import BleakClient, BleakGATTCharacteristic, BleakScanner
 from bleak.backends.device import BLEDevice
 from uuid import UUID
 
@@ -726,9 +726,11 @@ class PASCOBLEDevice():
             raise ConnectionError
 
 
-    async def _notify_callback(self, handle: int, data: bytearray):
+    async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
         #ble_notify_data = f'NOTIFY# {"".join(["%02X " % d for d in data])}'
         #print(ble_notify_data)
+
+        handle = bleakGATTChar.handle
 
         # Reading measurement response
         if self._handle_service[handle] > 0:
