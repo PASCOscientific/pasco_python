@@ -35,7 +35,7 @@ class PASCOBLEDevice():
 
     WIRELESS_RMS_START = [0X37, 0X01, 0X00]
 
-    TIME_DELAY = 0.05                       # Time to wait after sending a read command
+    TIME_DELAY = 1.0                       # Time to wait after sending a read command
 
     def __init__(self):
         """
@@ -50,6 +50,7 @@ class PASCOBLEDevice():
         self._airlink_sensor_id = None
         self._type = "BLE"
         self._loop = asyncio.new_event_loop()
+        self._queue = asyncio.Queue()   # this is used to synchronize with the callback
         self._data_ack_counter = {}
 
         self._sensors = []
@@ -64,8 +65,6 @@ class PASCOBLEDevice():
         self._notify_sensor_id = None
         self._data_results = {}
         self._measurement_sensor_ids = {}
-
-        self._notifications_queue = []
 
         # Load Datasheet
         package_path = os.path.dirname(os.path.abspath(__file__))
@@ -143,6 +142,9 @@ class PASCOBLEDevice():
         return self._sensors
 
 
+# ---------- Connecting ----------
+
+
     def scan(self, sensor_name_filter=None):
         """
         Scans for all PASCO devices
@@ -182,20 +184,25 @@ class PASCOBLEDevice():
         return found_devices
 
 
-    def _set_uuid(self, service_id, characteristic_id):
+    def _get_notify_uuids(self) -> list[UUID]:
         """
-        Create UUID for service and characteristic
-
-        Args:
-            service_id: The sensor service we're connecting to
-            characteristic_id: The characteristic we want to communicate with
+        Create a list of UUIDs for characteristics who have a notify property.
+        This will be used to enable notifications from all of these characteristics
+            in the connect method
         
         Returns:
-            uuid object
+            list of uuid objects
         """
-    
-        uuid = "4a5c000" + str(service_id) + "-000" + str(characteristic_id) + "-0000-0000-5c1e741f1c00"
-        return UUID(uuid)
+        uuids = []
+
+        services = self._client.services
+        for service in services:
+            chars = service.characteristics
+            for char in chars:
+                if 'notify' in char.properties:
+                    uuids.append(UUID(char.uuid))
+
+        return uuids
 
 
     def connect(self, ble_device: BLEDevice):
@@ -220,13 +227,12 @@ class PASCOBLEDevice():
         except:
             raise self.BLEConnectionError('Could not connect to the sensor')
 
-        else:
-            self._set_device_params(ble_device)
+        self._set_device_params(ble_device)
 
-            if (self._dev_type == "Rotary Motion"):
-                self._send_command(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START)
+        if (self._dev_type == "Rotary Motion"):
+            self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START))
 
-            self._initialize_sensor_values()
+        self._initialize_sensor_values()
 
 
     def connect_by_id(self, pasco_device_id):
@@ -261,21 +267,14 @@ class PASCOBLEDevice():
 
         self._set_handle_service()
 
-        uuid = self._set_uuid(self.SENSOR_SERVICE_ID, self.RECV_CMD_CHAR_ID)
-        await self._client.start_notify(uuid, self._notify_callback)
-        self._notifications_queue.append(uuid)
+        uuids = self._get_notify_uuids()
+        # start receiving notifications from all characteristics that notify
+        for uuid in uuids:
+            await self._client.start_notify(uuid, self._notify_callback)
 
 
     def keepalive(self):
-        self._send_command(self.SENSOR_SERVICE_ID, [0x00])
-
-
-    def _set_handle_service(self):
-        """ Create dictionary to to lookup service_id given the ble device handle """
-        for service in self._client.services:
-            for characteristic in service.characteristics:
-                if characteristic.uuid[7].isnumeric():
-                    self._handle_service[characteristic.handle] = int(characteristic.uuid[7])
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, [0x00]))
 
 
     def is_connected(self):
@@ -287,179 +286,43 @@ class PASCOBLEDevice():
 
 
     def disconnect(self):
+
+
+
         """
         Disconnect from the device
         """
         if self._client != None:
-            self._loop.run_until_complete(self._async_disconnect())
-        self._client = None
+            self._loop.run_until_complete(self._client.disconnect())
+        self._client = None   
 
 
-    async def _async_disconnect(self):
-        await self._client.disconnect()       
+# ---------- Initializing ----------
 
 
-    def _set_device_params(self, ble_device):
+    def _set_handle_service(self):
+        """ Create dictionary to to lookup service_id given the ble device handle """
+        for service in self._client.services:
+            for characteristic in service.characteristics:
+                if characteristic.uuid[7].isnumeric():
+                    self._handle_service[characteristic.handle] = int(characteristic.uuid[7])
+
+
+    def _set_uuid(self, service_id, characteristic_id):
         """
-        Get the device name and sensor ID from the BLE advertised name
+        Create UUID for service and characteristic
 
         Args:
-            ble_device (BLEDevice): The user selected BLE device
-        """
-        self._address = ble_device.address
-        name_parts = ble_device.name.rsplit(' ', 1)
-        self._dev_type = name_parts[0]
-        self._serial_id = name_parts[1][0:7]
-        self._name = self._dev_type + ' ' + self._serial_id
-        self._interface_id = self._decode64(name_parts[1][8]) + 1024
-
-
-    def _decode64(self, charVal):
-        """
-        Decode Base-64 character to corresponding integer
-        0-9 	-> '0' - '9'
-        10-25	-> 'K' - 'Z'
-        26-35	-> 'A' - 'J'
-        36-61	-> 'a' - 'z'
-        62		-> '#'
-        63		-> '*'
-
-        Args:
-            charVal (char): A single character
-
+            service_id: The sensor service we're connecting to
+            characteristic_id: The characteristic we want to communicate with
+        
         Returns:
-            Integer value corresponding to the Base-64 character
+            uuid object
         """
-        if charVal >= '0' and charVal <= '9':
-            return ord(charVal) - ord('0')
-        elif charVal >= 'K' and charVal <= 'Z':
-            return ord(charVal) - ord('A')
-        elif charVal >= 'A' and charVal <= 'J':
-            return ord(charVal) - ord('A') + 26
-        elif charVal >= 'a' and charVal <= 'z':
-            return ord(charVal) - ord('a') + 36
-        elif charVal == '*':
-            return 62
-        elif charVal == '#':
-            return 63
-        else:
-            return -1
-
-
-    def _twos_comp(self, value, byte_len):
-        """
-        Get two's complement of an integer value
-
-        Args:
-            value (int): Integer value we want to convert
-            byteLength (int): Number of bytes the integer is suppoed to be
-
-        Returns:
-            Two' complement of an integer value
-        """
-        bit_len = byte_len * 8
-        if value and value > (1<<(bit_len-1)):
-            return value-(1<<bit_len)
-        return value
-
-
-    def _binary_fraction(self, value):
-        return (value >> 16) + ((value & 0xFFFF)/2**16)
-
-
-    def _binary_float(self, value, byte_len):
-        """ IEEE 754 Conversion"""
-        bit_len = byte_len * 8
-        sign = 1 if value >> 31 == 0 else -1
-        exp = (value >> (bit_len-9)) & 0xFF
-        mantissa = value & 0xFFFFFF | 0x800000 if exp != 0 else value & 0x7FFFFFFF
-
-        return float(sign * mantissa * 2**(exp-150))
-
-
-    def _calc_4_params(self, raw, x1, y1, x2, y2):
-        b = (x1*y2 - x2*y1)/(x1-x2)
-        if (x1 != 0):
-            m = (y1 - b)/x1
-        if (x2 != 0):
-            m = (y2 - b)/x2
-        
-        return m * raw + b
-
-    def _limit(self, num, minimum, maximum):
-        """
-        Limits input number between minimum and maximum values.
-
-        Args:
-            num (int/float): input number
-            minimum (int): min number
-            maximum (int): max number
-        """
-        return max(min(num, maximum), minimum)
-
-
-    def _calc_linear_params(self, raw, m, b):
-        """
-        Return corresponding value of an input using a basic linear equation
-
-        Args:
-            raw (float): Linear equation "x" value
-            m (float): Slope
-            b (float): y-intercept
-        """
-        return m * raw + b
-
-    def _calc_rotary_pos(self, count, x, r):
-        return (count * x) / r
-
-
-    def _send_command(self, service_id, command):
-        """
-        Sends a command to our device
-
-        Args:
-            service id (int): Sensor channel we are sending data to
-            characteristic id (int): Characteristic we are sending data to
-            command (bytearray): Bytes array of data we are sending
-        
-        Return:
-            True or false for success or fail
-        
-        Raises:
-            Error if we were unable to send command
-        """
-        uuid = self._set_uuid(service_id, self.SEND_CMD_CHAR_ID)
-
-        try:
-            self._write(uuid, command)
-            time.sleep(self.TIME_DELAY) # Wait for the sensor to proccess the command
-        except:
-            raise self.CommunicationError
-
-
-    def _send_ack(self, service_id, command):
-        """
-        Write acknowledgement packet to sensor for continuous data
-
-        Args:
-            service id (int): Sensor channel we are sending data to
-            command (bytearray): Bytes array that contains the packet number we last received
-        """
-        uuid = self._set_uuid(service_id, self.SEND_ACK_CHAR_ID)
-
-        try:
-            self._loop.run_until_complete(self._write(uuid, command))
-        except:
-            raise self.CommunicationError
-
-
-    def _write(self, uuid, data_to_write):
-        #data_to_write = bytes(command).hex()
-        #ble_write_data = f'WRITE# {data_to_write} to {uuid}'
-        #print(ble_write_data)
-
-        self._loop.run_until_complete(self._client.write_gatt_char(uuid, bytes(data_to_write)))
-
+    
+        uuid = "4a5c000" + str(service_id) + "-000" + str(characteristic_id) + "-0000-0000-5c1e741f1c00"
+        return UUID(uuid)
+    
 
     def _initialize_sensor_values(self):
         
@@ -489,6 +352,7 @@ class PASCOBLEDevice():
                     do_plug_detect = True
 
             if do_plug_detect:
+                print("detecting")
                 self.detect_controlnode_devices()
             else:
                 self.get_sensor_datasheet_info()
@@ -561,8 +425,7 @@ class PASCOBLEDevice():
             raise self.DeviceNotConnected()
 
         cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_DETECT_DEVICES ]
-        self._send_command(self.SENSOR_SERVICE_ID, cmd)
-        self._loop.run_until_complete(self._single_listen(self.SENSOR_SERVICE_ID))
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 
     def get_sensor_list(self):
@@ -596,6 +459,209 @@ class PASCOBLEDevice():
             raise self.SensorNotFound
 
         return measurement_list
+
+
+    def read_factory_cal(self, sensor_id):
+        """
+        Read factory calibrations from sensor's built in memory
+        """
+        factory_cal_count = 0
+
+        for m_id, m in self._device_measurements[sensor_id].items():
+            if m['Type'] == 'FactoryCal':
+                m['FactoryCalOrder'] = factory_cal_count
+                factory_cal_count += 1
+
+        if factory_cal_count > 0:
+            # Transfer Block RAM Command
+            ll_read = 128
+            ll_storage = 3
+            ll = ll_read + ll_storage
+
+            address = sensor_id + 2
+            num_bytes = 16 * factory_cal_count
+            service_id = self.SENSOR_SERVICE_ID
+            
+            command = [ self.GCMD_XFER_BURST_RAM, ll,
+                        address & 0xFF, address>>8 & 0XFF, address>>16 & 0XFF, address>>24 & 0XFF,
+                        num_bytes & 0xFF, num_bytes>>8 & 0XFF ]
+
+            self._loop.run_until_complete(self.write_await_callback(service_id, command))
+
+            #Start Block Command
+            command = [ 0X09, 0X01, num_bytes & 0XFF, num_bytes>>8 & 0XFF, 16 ]
+
+            self._loop.run_until_complete(self.write_await_callback(service_id, command))
+
+            """
+            for m_id, m in self._device_measurements[sensor_id].items():
+                i = 0
+                if m['Type'] == 'FactoryCal':
+                    m['FactoryCalParams'] = self._factory_cal_params[i]
+            
+            self._factory_cal_params = {}
+            """
+
+
+# ---------- Communicating ----------
+
+
+    def _send_ack(self, service_id, command):
+        """
+        Write acknowledgement packet to sensor for continuous data
+
+        Args:
+            service id (int): Sensor channel we are sending data to
+            command (bytearray): Bytes array that contains the packet number we last received
+        """
+        uuid = self._set_uuid(service_id, self.SEND_ACK_CHAR_ID)
+
+        try:
+            self._loop.run_until_complete(self.async_write(uuid, command))
+        except:
+            raise self.CommunicationError
+
+
+    async def write(self, service_id, command):
+        #data_to_write = bytes(command).hex()
+        #ble_write_data = f'WRITE# {data_to_write} to {uuid}'
+        #print(ble_write_data)
+
+        uuid = self._set_uuid(service_id, self.SEND_CMD_CHAR_ID)
+        try:
+            await self._client.write_gatt_char(uuid, bytes(command))
+        except:
+            raise self.CommunicationError
+
+
+    def _set_device_params(self, ble_device):
+        """
+        Get the device name and sensor ID from the BLE advertised name
+
+        Args:
+            ble_device (BLEDevice): The user selected BLE device
+        """
+        self._address = ble_device.address
+        name_parts = ble_device.name.rsplit(' ', 1)
+        self._dev_type = name_parts[0]
+        self._serial_id = name_parts[1][0:7]
+        self._name = self._dev_type + ' ' + self._serial_id
+        self._interface_id = self._decode64(name_parts[1][8]) + 1024
+
+
+    async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
+        # place the callback in the queue so we can synchronize off of it
+        await self._queue.put(True)
+        handle = bleakGATTChar.handle
+
+        # Reading measurement response
+        if self._handle_service[handle] > 0:
+            sensor_id = self._handle_service[handle] - 1
+
+            # Received periodic data
+            if (data[0] <= 0x1F):
+                # Add data to stack
+                self._data_stack[sensor_id] += data[1:]
+
+                self._data_ack_counter[sensor_id] += 1
+
+                self._loop.create_task(self._decode_data(sensor_id))
+
+                # Send acknowledgement package
+                if (self._data_ack_counter[sensor_id] > 8):
+                    try:
+                        self._data_ack_counter[sensor_id] = 0
+                        service_id = sensor_id + 1
+                        command = [ data[0] ]
+                        self._send_ack(service_id, command)
+                    except:
+                        raise self.CommunicationError()
+                    
+                return
+
+            # Received single data packet
+            elif (data[0] is self.GRSP_RESULT):
+                # Valid data 
+                if data[1] == 0x00:
+                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
+                        self._data_packet = data[3:]
+                        
+                    elif data[2] == 1: #SPI Data (ex: AirLink Interface connected)
+                        pasport_service_id = 1
+                        self._loop.run_until_complete(self.write_await_callback(pasport_service_id, [ 0x08 ]))
+                        # self._loop.run_until_complete(self._single_listen(pasport_service_id))
+                        #TODO: AirLink things
+
+                # Error receiving data
+                elif data[1] == 0x01:
+                    pass
+
+            elif (data[0] == self.GEVT_SENSOR_ID):
+                self._airlink_sensor_id = data[1]
+
+        # Reading device response
+        elif self._handle_service[handle] == self.SENSOR_SERVICE_ID:
+            # Received single data packet
+            if (data[0] is self.GRSP_RESULT):
+                # Valid data 
+                if data[1] == 0x00:
+                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
+                        self._data_packet = data[3:]
+                    elif data[2] is self.GCMD_CUSTOM_CMD:
+                        self._data_packet = data[3:]
+                        self._data_stack[self.SENSOR_SERVICE_ID] = self._data_packet
+                        auto_id_packet = await self._decode_auto_id_packet(self.SENSOR_SERVICE_ID)
+
+                        i = 0
+                        if len(auto_id_packet):
+                            for sensor in self._setup_sensors:
+                                if sensor['sensor_id'] == '' and sensor['plug_detect'] == 1:
+                                    sensor['sensor_id'] = auto_id_packet[i] if auto_id_packet[i] != 0 else ''
+                                    i+=1
+                        
+                            self.get_sensor_datasheet_info()
+
+
+            # TODO: Get factory calibration
+            elif (data[0] == 0x0A):
+                factory_cal_params = {data[1]: []}
+                #self._factory_cal_params[data[1]] = []
+                num_params = 4
+                byte_len = 4
+                cal_data = data[2:]
+                for p in range(num_params):
+                    byte_value = 0
+                    for d in range(byte_len):
+                        stack_value = cal_data.pop(0)
+                        byte_value += stack_value * (2**(8*d))
+
+                    param = self._binary_float(byte_value, byte_len)
+                    factory_cal_params[data[1]].append(param)
+
+                # Save factory calibration parameters to measurement
+                for m_id, m in self._device_measurements[self._notify_sensor_id].items():
+                    if 'FactoryCalOrder' in m and m['FactoryCalOrder'] in factory_cal_params:
+                        m['FactoryCalParams'] = factory_cal_params[m['FactoryCalOrder']]
+
+            elif (data[0] == 0x0B):
+                self._notify_sensor_id = None
+
+
+    async def check_callback(self):
+        # checks for a callback from the _notify_callback() function
+        await self._queue.get()
+        self._queue.task_done()
+
+
+    async def write_await_callback(self, service_id, one_shot_cmd):
+        # sends a write command requesting data and listens until it gets the callback notification
+        async with asyncio.TaskGroup() as tg:
+            write = tg.create_task(self.write(service_id, one_shot_cmd))
+            check_done = tg.create_task(self.check_callback())
+
+     
+
+# ---------- Reading data --------
 
 
     def read_data(self, measurement):
@@ -710,119 +776,7 @@ class PASCOBLEDevice():
                 raise self.InvalidParameter
 
         return None
-        
-
-    async def _single_listen(self, service_id):
-        uuid = self._set_uuid(service_id, self.RECV_CMD_CHAR_ID)
-        try:
-            if uuid not in self._notifications_queue:
-                await self._client.start_notify(uuid, self._notify_callback)
-                self._notifications_queue.append(uuid)
-            else:
-                await self._client.stop_notify(uuid)
-                self._notifications_queue.remove(uuid)
-
-        except:
-            raise ConnectionError
-
-
-    async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
-        #ble_notify_data = f'NOTIFY# {"".join(["%02X " % d for d in data])}'
-        #print(ble_notify_data)
-
-        handle = bleakGATTChar.handle
-
-        # Reading measurement response
-        if self._handle_service[handle] > 0:
-            sensor_id = self._handle_service[handle] - 1
-
-            # Received periodic data
-            if (data[0] <= 0x1F):
-                
-                # Add data to stack
-                self._data_stack[sensor_id] += data[1:]
-
-                self._data_ack_counter[sensor_id] += 1
-
-                self._loop.create_task(self._decode_data(sensor_id))
-
-                # Send acknowledgement package
-                if (self._data_ack_counter[sensor_id] > 8):
-                    try:
-                        self._data_ack_counter[sensor_id] = 0
-                        service_id = sensor_id + 1
-                        command = [ data[0] ]
-                        self._send_ack(service_id, command)
-                    except:
-                        raise self.CommunicationError()
-                return
-
-            # Received single data packet
-            elif (data[0] is self.GRSP_RESULT):
-                # Valid data 
-                if data[1] == 0x00:
-                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._data_packet = data[3:]
-                    elif data[2] == 1: #SPI Data (ex: AirLink Interface connected)
-                        pasport_service_id = 1
-                        self._send_command(pasport_service_id, [ 0x08 ])
-                        self._loop.run_until_complete(self._single_listen(pasport_service_id))
-                        #TODO: AirLink things
-
-                # Error receiving data
-                elif data[1] == 0x01:
-                    pass
-
-            elif (data[0] == self.GEVT_SENSOR_ID):
-                self._airlink_sensor_id = data[1]
-
-        # Reading device response
-        elif self._handle_service[handle] == self.SENSOR_SERVICE_ID:
-            # Received single data packet
-            if (data[0] is self.GRSP_RESULT):
-                # Valid data 
-                if data[1] == 0x00:
-                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._data_packet = data[3:]
-                    elif data[2] is self.GCMD_CUSTOM_CMD:
-                        self._data_packet = data[3:]
-                        self._data_stack[self.SENSOR_SERVICE_ID] = self._data_packet
-                        auto_id_packet = await self._decode_auto_id_packet(self.SENSOR_SERVICE_ID)
-
-                        i = 0
-                        if len(auto_id_packet):
-                            for sensor in self._setup_sensors:
-                                if sensor['sensor_id'] == '' and sensor['plug_detect'] == 1:
-                                    sensor['sensor_id'] = auto_id_packet[i] if auto_id_packet[i] != 0 else ''
-                                    i+=1
-                        
-                            self.get_sensor_datasheet_info()
-
-
-            # TODO: Get factory calibration
-            elif (data[0] == 0x0A):
-                factory_cal_params = {data[1]: []}
-                #self._factory_cal_params[data[1]] = []
-                num_params = 4
-                byte_len = 4
-                cal_data = data[2:]
-                for p in range(num_params):
-                    byte_value = 0
-                    for d in range(byte_len):
-                        stack_value = cal_data.pop(0)
-                        byte_value += stack_value * (2**(8*d))
-
-                    param = self._binary_float(byte_value, byte_len)
-                    factory_cal_params[data[1]].append(param)
-
-                # Save factory calibration parameters to measurement
-                for m_id, m in self._device_measurements[self._notify_sensor_id].items():
-                    if 'FactoryCalOrder' in m and m['FactoryCalOrder'] in factory_cal_params:
-                        m['FactoryCalParams'] = factory_cal_params[m['FactoryCalOrder']]
-
-            elif (data[0] == 0x0B):
-                self._notify_sensor_id = None
-
+    
 
     def _get_sensor_measurements(self, sensor_id):
         service_id = sensor_id + 1
@@ -833,14 +787,128 @@ class PASCOBLEDevice():
 
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
-        self._send_command(service_id, one_shot_cmd)
-        self._notify_sensor_id = sensor_id
-        self._loop.run_until_complete(self._single_listen(service_id))
+        
+        # request data
+        # read response
+        # these need to be gathered and executed as a group so they 
+        # block the execution of the rest of the program
 
+        self._loop.run_until_complete(self.write_await_callback(service_id, one_shot_cmd))
+
+        # self._notify_sensor_id = sensor_id
+
+        # self._loop.run_until_complete(self.write_await_callback(service_id, one_shot_cmd))
+        # self._loop.run_until_complete(self._single_listen(service_id))
+
+        # process the data
         self._data_stack[sensor_id] = self._data_packet
-        self._loop.run_until_complete(self._decode_data(sensor_id))
+        self._decode_data(sensor_id)
 
 
+# ---------- Processing ----------
+
+
+    def _decode64(self, charVal):
+        """
+        Decode Base-64 character to corresponding integer
+        0-9 	-> '0' - '9'
+        10-25	-> 'K' - 'Z'
+        26-35	-> 'A' - 'J'
+        36-61	-> 'a' - 'z'
+        62		-> '#'
+        63		-> '*'
+
+        Args:
+            charVal (char): A single character
+
+        Returns:
+            Integer value corresponding to the Base-64 character
+        """
+        if charVal >= '0' and charVal <= '9':
+            return ord(charVal) - ord('0')
+        elif charVal >= 'K' and charVal <= 'Z':
+            return ord(charVal) - ord('A')
+        elif charVal >= 'A' and charVal <= 'J':
+            return ord(charVal) - ord('A') + 26
+        elif charVal >= 'a' and charVal <= 'z':
+            return ord(charVal) - ord('a') + 36
+        elif charVal == '*':
+            return 62
+        elif charVal == '#':
+            return 63
+        else:
+            return -1
+
+
+    def _twos_comp(self, value, byte_len):
+        """
+        Get two's complement of an integer value
+
+        Args:
+            value (int): Integer value we want to convert
+            byteLength (int): Number of bytes the integer is suppoed to be
+
+        Returns:
+            Two' complement of an integer value
+        """
+        bit_len = byte_len * 8
+        if value and value > (1<<(bit_len-1)):
+            return value-(1<<bit_len)
+        return value
+
+
+    def _binary_fraction(self, value):
+        return (value >> 16) + ((value & 0xFFFF)/2**16)
+
+
+    def _binary_float(self, value, byte_len):
+        """ IEEE 754 Conversion"""
+        bit_len = byte_len * 8
+        sign = 1 if value >> 31 == 0 else -1
+        exp = (value >> (bit_len-9)) & 0xFF
+        mantissa = value & 0xFFFFFF | 0x800000 if exp != 0 else value & 0x7FFFFFFF
+
+        return float(sign * mantissa * 2**(exp-150))
+
+
+    def _calc_4_params(self, raw, x1, y1, x2, y2):
+        b = (x1*y2 - x2*y1)/(x1-x2)
+        if (x1 != 0):
+            m = (y1 - b)/x1
+        if (x2 != 0):
+            m = (y2 - b)/x2
+        
+        return m * raw + b
+
+
+    def _limit(self, num, minimum, maximum):
+        """
+        Limits input number between minimum and maximum values.
+
+        Args:
+            num (int/float): input number
+            minimum (int): min number
+            maximum (int): max number
+        """
+        return max(min(num, maximum), minimum)
+
+
+    def _calc_linear_params(self, raw, m, b):
+        """
+        Return corresponding value of an input using a basic linear equation
+
+        Args:
+            raw (float): Linear equation "x" value
+            m (float): Slope
+            b (float): y-intercept
+        """
+        return m * raw + b
+
+
+    def _calc_rotary_pos(self, count, x, r):
+        return (count * x) / r
+
+    
     async def _decode_auto_id_packet(self, sensor_id):
 
         plug_count = 0
@@ -861,7 +929,8 @@ class PASCOBLEDevice():
         
         return results
 
-    async def _decode_data(self, sensor_id):
+
+    def _decode_data(self, sensor_id):
         try:
             self._sensor_data_prev[sensor_id] = self._sensor_data[sensor_id].copy()
             self._sensor_data[sensor_id] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor_id].items() }
@@ -1107,52 +1176,6 @@ class PASCOBLEDevice():
             elif c == ')' and stack:
                 start = stack.pop()
                 yield (len(stack), string[start + 1: i])
-
-
-    def read_factory_cal(self, sensor_id):
-        """
-        Read factory calibrations from sensor's built in memory
-        """
-        factory_cal_count = 0
-
-        for m_id, m in self._device_measurements[sensor_id].items():
-            if m['Type'] == 'FactoryCal':
-                m['FactoryCalOrder'] = factory_cal_count
-                factory_cal_count += 1
-
-        if factory_cal_count > 0:
-            # Transfer Block RAM Command
-            ll_read = 128
-            ll_storage = 3
-            ll = ll_read + ll_storage
-
-            address = sensor_id + 2
-            num_bytes = 16 * factory_cal_count
-            service_id = self.SENSOR_SERVICE_ID
-            
-            command = [ self.GCMD_XFER_BURST_RAM, ll,
-                        address & 0xFF, address>>8 & 0XFF, address>>16 & 0XFF, address>>24 & 0XFF,
-                        num_bytes & 0xFF, num_bytes>>8 & 0XFF ]
-
-            self._send_command(service_id, command)
-            self._notify_sensor_id = sensor_id
-            self._loop.run_until_complete(self._single_listen(service_id))
-
-            #Start Block Command
-            command = [ 0X09, 0X01, num_bytes & 0XFF, num_bytes>>8 & 0XFF, 16 ]
-
-            self._send_command(service_id, command)
-            self._notify_sensor_id = sensor_id
-            self._loop.run_until_complete(self._single_listen(service_id))
-
-            """
-            for m_id, m in self._device_measurements[sensor_id].items():
-                i = 0
-                if m['Type'] == 'FactoryCal':
-                    m['FactoryCalParams'] = self._factory_cal_params[i]
-            
-            self._factory_cal_params = {}
-            """
 
 
     class Error(Exception):

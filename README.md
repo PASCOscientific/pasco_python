@@ -99,28 +99,6 @@ Each "sensor" can have multiple measurements
 
 PASCO's Bluetooth sensors will turn off after 5 minutes of no activity. To keep the device on, call the `device.keepalive()` method. This will keep the connection active without requesting any new data.
 
-### Time/Speed Parameter
-
-By default, Python code tries to run as fast as possible on a computer. On some computers, this may be a bit too
-fast where the Bluetooth Sensor cannot keep up with the speed of the commands the computer is sending. For this
-Reason we have a `TIME_DELAY` variable that allows the user to speed up or slow down communication. The default
-value is 0.05 seconds which allows for a maximum of 20 commands per second to be sent. You can adjust this value
-immediately after creating an object.
-
-```
-
-from pasco import PASCOBLEDevice
-
-my_sensor = PASCOBLEDevice()
-
-# Slow down the sensor communication
-my_sensor.TIME_DELAY = 0.2
-
-my_sensor.connect_by_id('123-456')
-....
-
-```
-
 ---
 
 ## Step 1: Create an object for the device
