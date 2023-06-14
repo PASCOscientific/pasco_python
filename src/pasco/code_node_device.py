@@ -33,7 +33,7 @@ class CodeNodeDevice(PASCOBLEDevice):
         led_intensity = self._limit(intensity, 0, 255)
 
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LED, led_index, led_intensity ]
-        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 
     def set_leds_in_array(self, xy_list=[], intensity=128):
@@ -71,7 +71,7 @@ class CodeNodeDevice(PASCOBLEDevice):
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS,
                 led_activate & 0xFF, led_activate>>8 & 0XFF, led_activate>>16 & 0XFF, led_activate>>24 & 0XFF,
                 led_intensity ]
-        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 
     def set_rgb_led(self, red, green, blue):
@@ -96,7 +96,7 @@ class CodeNodeDevice(PASCOBLEDevice):
         led_b = int(self._limit(blue, 0, 255))
 
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_LEDS, led_r, led_g, led_b, 0X80, 0X00 ]
-        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 
     def set_sound_frequency(self, frequency):
@@ -115,7 +115,7 @@ class CodeNodeDevice(PASCOBLEDevice):
         frequency = self._limit(frequency, 0, 20000)
 
         cmd = [ self.GCMD_CODENODE_CMD, self.CODENODE_CMD_SET_SOUND_FREQ, frequency & 0xFF, frequency>>8 & 0XFF ]
-        self._send_command(self.SENSOR_SERVICE_ID, cmd)
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 
     def scroll_text_in_array(self, text):

@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import time
+import struct
 import xml.etree.ElementTree as ET
 
 from bleak import BleakClient, BleakGATTCharacteristic, BleakScanner
@@ -26,10 +27,13 @@ class PASCOBLEDevice():
     SEND_ACK_CHAR_ID = 5
 
     GCMD_CUSTOM_CMD = 0x37
-    GCMD_CONTROL_NODE_CMD = 0x37
-    CTRLNODE_CMD_DETECT_DEVICES = 2         # Detects which devices are attached
     GCMD_READ_ONE_SAMPLE = 0x05
     GCMD_XFER_BURST_RAM = 0X0E
+
+    # connection sequence commands for control Node
+    CNTRLNODE_PLUGINS_CALLBACK = 0x82
+    CTRLNODE_CMD_DETECT_DEVICES = 8         # Detects which devices are attached
+    GCMD_CONTROL_NODE_CMD = 0x37
 
     GRSP_RESULT = 0XC0                      # Generic response packet
     GEVT_SENSOR_ID = 0x82                   # Get Sensor ID (for AirLink)
@@ -54,18 +58,30 @@ class PASCOBLEDevice():
         self._queue = asyncio.Queue()   # this is used to synchronize with the callback
         self._data_ack_counter = {}
 
-        self._sensors = []
-        self._device_measurements = {}
-        self._handle_service = {} # Array to lookup BLE service id with the handle
-        self._data_stack = {}
-        self._data_packet = []
-        self._sensor_data = {}
-        self._sensor_data_prev = {}
-        self._rotary_pos_data = {}
+        # sensor and measurement data
+        self._sensor_names = []             # {sensor name: sensor object}
+                                            # this causes problems with multiple of the same sensor
+        self._device_measurements = {}      # {sensor_channel: {measurementID: measurement attrs}}
+                                            # stores measurements available through each sensor on the device
+        self._handle_service = {}           # Array to lookup BLE service id with the handle
+        self._data_stack = {}               # {sensor_channel: [data from sensor_channel]}
+                                            # used to organize data packets by sensor channel as they come in
+        self._data_packet = []              # [raw data]
+        self._response_data = bytearray()   # response_data holds the data from the device callback
+        self._sensor_data = {}              # {sensor_channel: {measurementID: measurement value}}
+        self._sensor_data_prev = {}         # {sensor_channel: {measurementID: measurement value previous}}
+        self._rotary_pos_data = {}          # apparently unused. 
 
-        self._notify_sensor_id = None
-        self._data_results = {}
-        self._measurement_sensor_ids = {}
+        self._notify_sensor_id = None       # apparently unused.
+        self._data_results = {}             # {measurement name: human-readable data}
+                                            # stores sensor readings organized by measurement
+                                            # this causes problems with multiple of the same sensor
+        self._measurement_sensor_ids = {}   # {measurement name: sensor channel at which measurement can be requested}
+                                            # This causes problems with multiple of the same sensor
+
+        # connection sequence commands for control Node
+        GCMD_CONTROL_NODE_CMD = 0x37
+        CTRLNODE_CMD_DETECT_DEVICES = 2         # Detects which devices are attached
 
         # Load Datasheet
         package_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -140,7 +156,7 @@ class PASCOBLEDevice():
 
     @property
     def device_sensors(self):
-        return self._sensors
+        return self._sensor_names
 
 
 # ---------- Connecting ----------
@@ -203,6 +219,7 @@ class PASCOBLEDevice():
                 if 'notify' in char.properties:
                     uuids.append(UUID(char.uuid))
 
+        # print(uuids)
         return uuids
 
 
@@ -233,7 +250,7 @@ class PASCOBLEDevice():
         if (self._dev_type == "Rotary Motion"):
             self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, self.WIRELESS_RMS_START))
 
-        self._initialize_sensor_values()
+        self.initialize_device()
 
 
     def connect_by_id(self, pasco_device_id):
@@ -324,19 +341,30 @@ class PASCOBLEDevice():
         uuid = "4a5c000" + str(service_id) + "-000" + str(characteristic_id) + "-0000-0000-5c1e741f1c00"
         return UUID(uuid)
     
+    def scan_controlnode_plugins(self):
+        """
+        Detect the devices that are attached
 
-    def _initialize_sensor_values(self):
-        
-        do_plug_detect = False
+        Args:
 
+        """
+        if self.is_connected() is False:
+            raise self.DeviceNotConnected()
+
+        cmd = [ self.CTRLNODE_CMD_DETECT_DEVICES ]
+        return self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
+
+
+    def initialize_device(self):
+        # gather data on each interface channel
         try:
             interface = self._xml_root.find("./Interfaces/Interface[@ID='%s']" % self._interface_id)
 
-            self._setup_sensors = [
+            self._device_channels = [
                 {
                     'id': int(c.get('ID')),
                     'name': c.get('NameTag'),
-                    'sensor_id': int(c.get('SensorID')) if 'SensorID' in c.attrib else '',
+                    'sensor_id': int(c.get('SensorID')) if 'SensorID' in c.attrib else 0,
                     'type': c.get('Type'),
                     'output_type': c.get('OutputType') if 'OutputType' in c.attrib else '',
                     'measurements': [],
@@ -348,85 +376,113 @@ class PASCOBLEDevice():
                 for c in interface.findall("./Channel")
             ]
 
-            for sensor in self._setup_sensors:
-                if sensor['type'] == 'Pasport' and sensor['sensor_id'] == "" and sensor['plug_detect'] == 1:
-                    do_plug_detect = True
+            # get a list of external sensors by sensor ID
+            # look up those IDs in the xml file and append their data to self._setup_sensors\
+            # sensors is a list of sensor ID's connected to the controlNode ports
+            if any([device['plug_detect'] == 1 for device in self._device_channels]):
+                self.scan_controlnode_plugins()
 
-            if do_plug_detect:
-                print("detecting")
-                self.detect_controlnode_devices()
+            # We need to add the external sensors from the control Node to self._setup_sensors
+            # before we get_sensor_datasheet_info
             else:
-                self.get_sensor_datasheet_info()
+                self.initialize_device_sensors()
         
         except:
             raise self.SensorSetupError
-
-
-    def get_sensor_datasheet_info(self):
+        
+    def initialize_device_sensors(self, plugin_sensor_ids = None):
         try:
-            for sensor in self._setup_sensors:
-                sensor_data = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % str(sensor['sensor_id']))
-                if sensor_data:
-                    sensor['name'] = sensor_data.get('Tag')
-                    sensor['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement[@Visible='1']")]
-                    sensor['factory_cal_ids'] = [m.get('ID') for m in sensor_data.findall("./Measurement[@Type='FactoryCal']")]
+            # FOR DEVICES WITH PLUGIN SENSORS (e.g. controlnode)
+            # on callback from the "send plugin sensors" command change the appropriate
+            # device channel's sensor_id to the ID returned for that channel in the callback.
+            # if no sensor ID is returned for that channel in the callback, then set sensor_id to ''
+            # Here I am assuming that the IDs in the callback are returned in sequential order of their channels
+            # (they are for the controlnode)
+            if plugin_sensor_ids != None:
+                i = 0
+                for channel in self._device_channels:
+                    if channel['plug_detect']:
+                        channel['sensor_id'] = plugin_sensor_ids[i]
+                        i += 1
 
-            # Iterate over Channels in XML
-            for sensor in self._setup_sensors:
-                if sensor['type'] == 'Pasport' and sensor['sensor_id'] != "":
-                    self._data_ack_counter[sensor['id']] = 0
-                    self._data_stack[sensor['id']] = []
-                    self._device_measurements[sensor['id']] = {}
+            # Iterate over channels on the interface
+            for channel in self._device_channels:
+                # print(f"channel {channel['id']}")
 
-                    xml_measurements = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % sensor['sensor_id'])
-                    for measurement in xml_measurements.findall("./Measurement"):
-                        measurement_id = {int(measurement.get('ID')): measurement.attrib}
-                        self._device_measurements[sensor['id']].update(measurement_id)
+                # if the interface channel is for a sensor
+                if channel['type'] == 'Pasport' and channel['sensor_id'] != 0:
+                    # if you have two of the same sensor connected (i.e. two high-speed steppers)
+                    # then just copy the data rather than reading the xml twice (which is impossible)
 
-                    for sensor_m_id, sensor_m in self._device_measurements[sensor['id']].items():
-                        sensor_m['ID'] = int(sensor_m['ID'])
-                        sensor_m['Type'] = sensor_m['Type'] if 'Type' in sensor_m else ''
-                        sensor_m['Visible'] = int(sensor_m['Visible']) if 'Visible' in sensor_m else 0
-                        sensor_m['Internal'] = int(sensor_m['Internal']) if 'Internal' in sensor_m else 0
-                        if 'DataSize' in sensor_m:
-                            sensor_m['DataSize'] = int(sensor_m['DataSize'])
-                            sensor['total_data_size'] += sensor_m['DataSize']
-                        if 'Inputs' in sensor_m and str(sensor_m['Inputs']).isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
-                        if 'Precision' in sensor_m and str(sensor_m['Precision']).isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
-                        #TODO: This is a temporary workaround for the code node cart
-                        if sensor_m['NameTag'] == "RawCartPosition":
-                            sensor_m['DataSize'] = 0
-                        sensor_m['Value'] = sensor_m['Value'] if 'Value' in sensor_m else 0 if sensor_m['Type'] == 'RotaryPos' else None
-
-                    # Initialize internal sensor measurement values
-                    self._sensor_data[sensor['id']] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor['id']].items() }
-
-                    # TODO: Factory Calibration check
-                    #self.read_factory_cal(sensor['id'])
+                    self._initialize_sensor(channel)
+   
 
             # Initialize device measurement values
-            self._measurement_sensor_ids = { measurement: sensor['id'] for sensor in self._setup_sensors for measurement in sensor['measurements'] }
-            self._data_results = { m: None for sensor in self._setup_sensors for m in sensor['measurements'] }
-
-            self._sensors = {sensor['name'] : sensor for sensor in self._setup_sensors}
+            # If the device channel has measurements (i.e. is a sensor channel) then associate it with its channel ID
+            self._measurement_sensor_ids = { measurement: channel['id'] for channel in self._device_channels for measurement in channel['measurements'] }
+            self._data_results = { m: None for sensor in self._device_channels for m in sensor['measurements'] }
+            self._sensor_names = {sensor['name'] : sensor for sensor in self._device_channels}
+            # [print(channel) for channel in self._device_channels]
 
 
         except:
             raise self.SensorSetupError
+        
+    
+    def _initialize_sensor(self, sensor_channel):
+        # initialize attributes associated with the channel
+        self._data_ack_counter[sensor_channel['id']] = 0
+        self._data_stack[sensor_channel['id']] = []
+        self._device_measurements[sensor_channel['id']] = {}
+
+        # get sensor data associated with that channel
+        sensor_data = self._xml_root.find("./Sensors/Sensor[@ID='%s']" % sensor_channel['sensor_id'])
+
+        # get name of sensor (e.g. "ControlNodeAcceleration")
+        sensor_channel['name'] = sensor_data.get('Tag')
+        # get names of measurements provided by sensor (e.g. "RawX, Accelerationy")
+        sensor_channel['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement[@Visible='1']")]
+        # get factory calibration IDs
+        sensor_channel['factory_cal_ids'] = [m.get('ID') for m in sensor_data.findall("./Measurement[@Type='FactoryCal']")]
+
+        # collect attributes of all measurements that the sensor can take
+        for measurement in sensor_data.findall("./Measurement"):
+            # add a dictionary connecting the measurement ID with a dictionary of all its attributes
+            measurement_id = {int(measurement.get('ID')): measurement.attrib}
+            self._device_measurements[sensor_channel['id']].update(measurement_id)
+
+        # fix types of measurement attributes so they are usable
+        for sensor_m_id, sensor_m in self._device_measurements[sensor_channel['id']].items():
+            sensor_m['ID'] = int(sensor_m['ID'])
+            sensor_m['Type'] = sensor_m['Type'] if 'Type' in sensor_m else ''
+            sensor_m['Visible'] = int(sensor_m['Visible']) if 'Visible' in sensor_m else 0
+            sensor_m['Internal'] = int(sensor_m['Internal']) if 'Internal' in sensor_m else 0
+            if 'DataSize' in sensor_m:
+                sensor_m['DataSize'] = int(sensor_m['DataSize'])
+                sensor_channel['total_data_size'] += sensor_m['DataSize']
+            if 'Inputs' in sensor_m and str(sensor_m['Inputs']).isnumeric(): sensor_m['Inputs'] = int(sensor_m['Inputs'])
+            if 'Precision' in sensor_m and str(sensor_m['Precision']).isnumeric(): sensor_m['Precision'] = int(sensor_m['Precision'])
+            #TODO: This is a temporary workaround for the code node cart
+            if sensor_m['NameTag'] == "RawCartPosition":
+                sensor_m['DataSize'] = 0
+            sensor_m['Value'] = sensor_m['Value'] if 'Value' in sensor_m else 0 if sensor_m['Type'] == 'RotaryPos' else None
 
 
-    def detect_controlnode_devices(self):
-        """
-        Detect the devices that are attached
+        # if you connect two of the same sensor (such as two high speed steppers)
+        # then after the xml finishes reading for the first it will be gone and unavailable to initialize the second
+        # thus if there is no sensor data for measurements we copy the data from the initialized sensor
+        if len(sensor_channel['measurements']) == 0:
+            for initialized_channel in [ch for ch in self._device_channels if ch['measurements'] != []]:
+                if initialized_channel['sensor_id'] == sensor_channel['sensor_id']:
+                    sensor_channel['measurements'] = initialized_channel['measurements']
+        
+        # Initialize internal sensor measurement values
+        self._sensor_data[sensor_channel['id']] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor_channel['id']].items() }
+       
+        # TODO: Factory Calibration check
+        #self.read_factory_cal(sensor['id'])
+        return
 
-        Args:
-
-        """
-        if self.is_connected() is False:
-            raise self.DeviceNotConnected()
-
-        cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_DETECT_DEVICES ]
-        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 
     def get_sensor_list(self):
@@ -436,7 +492,7 @@ class PASCOBLEDevice():
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
 
-        return [sensor_name for sensor_name, sensor in self._sensors.items()]
+        return [sensor_name for sensor_name, sensor in self._sensor_names.items()]
 
 
     def get_measurement_list(self, sensor_name=None):
@@ -453,9 +509,9 @@ class PASCOBLEDevice():
             raise self.InvalidParameter
 
         if sensor_name == None:
-            measurement_list = [measurement for measurement in self._data_results]
-        elif sensor_name in self._sensors:
-            measurement_list = self._sensors[sensor_name]['measurements']
+            measurement_list = [sensor['measurements'] for sensor in self._device_channels]
+        elif sensor_name in self._sensor_names:
+            measurement_list = self._sensor_names[sensor_name]['measurements']
         else:
             raise self.SensorNotFound
 
@@ -518,7 +574,7 @@ class PASCOBLEDevice():
         uuid = self._set_uuid(service_id, self.SEND_ACK_CHAR_ID)
 
         try:
-            self._loop.run_until_complete(self.async_write(uuid, command))
+            self._loop.run_until_complete(self.write(uuid, command))
         except:
             raise self.CommunicationError
 
@@ -550,24 +606,13 @@ class PASCOBLEDevice():
         self._interface_id = self._decode64(name_parts[1][8]) + 1024
 
 
-    async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
-        # place the callback in the queue so we can synchronize off of it
-        await self._queue.put(True)
-        handle = bleakGATTChar.handle
-
-        # Reading measurement response
-        if self._handle_service[handle] > 0:
-            sensor_id = self._handle_service[handle] - 1
-
-            # Received periodic data
+    def process_measurement_response(self, sensor_id, data):
+        # Received periodic data
             if (data[0] <= 0x1F):
                 # Add data to stack
                 self._data_stack[sensor_id] += data[1:]
-
                 self._data_ack_counter[sensor_id] += 1
-
                 self._loop.create_task(self._decode_data(sensor_id))
-
                 # Send acknowledgement package
                 if (self._data_ack_counter[sensor_id] > 8):
                     try:
@@ -579,6 +624,11 @@ class PASCOBLEDevice():
                         raise self.CommunicationError()
                     
                 return
+            
+            elif data[0] is self.CNTRLNODE_PLUGINS_CALLBACK:
+                
+                self.update_controlnode_plugin_sensor(data)
+                
 
             # Received single data packet
             elif (data[0] is self.GRSP_RESULT):
@@ -600,53 +650,74 @@ class PASCOBLEDevice():
             elif (data[0] == self.GEVT_SENSOR_ID):
                 self._airlink_sensor_id = data[1]
 
+
+    def update_controlnode_plugin_sensor(self, data):
+        # using the struct module, unpack the data via a little-endian encoding
+        # see https://docs.python.org/3/library/struct.html
+        # In a helper function:
+        # decode sensor IDs
+        # look up these IDs in data sheet
+        # add to sensor data variables
+        sensor_ids = struct.unpack('<xhhh', data)
+        self.initialize_device_sensors(sensor_ids)
+        pass
+
+
+    def process_device_response(self, data):
+        # Received single data packet
+        self._response_data = data
+        if (data[0] is self.GRSP_RESULT):
+            # Valid data 
+            if data[1] == 0x00:
+                if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
+                    self._data_packet = data[3:]
+                    
+
+        # TODO: Get factory calibration
+        elif (data[0] == 0x0A):
+            self._factory_calibrate(data)
+
+        elif (data[0] == 0x0B):
+            self._notify_sensor_id = None
+
+
+
+    def _factory_calibrate(self, data):
+        factory_cal_params = {data[1]: []}
+        #self._factory_cal_params[data[1]] = []
+        num_params = 4
+        byte_len = 4
+        cal_data = data[2:]
+        for p in range(num_params):
+            byte_value = 0
+            for d in range(byte_len):
+                stack_value = cal_data.pop(0)
+                byte_value += stack_value * (2**(8*d))
+
+            param = self._binary_float(byte_value, byte_len)
+            factory_cal_params[data[1]].append(param)
+
+        # Save factory calibration parameters to measurement
+        for m_id, m in self._device_measurements[self._notify_sensor_id].items():
+            if 'FactoryCalOrder' in m and m['FactoryCalOrder'] in factory_cal_params:
+                m['FactoryCalParams'] = factory_cal_params[m['FactoryCalOrder']]
+
+
+    async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
+        # place the callback in the queue so we can synchronize off of it
+        await self._queue.put(True)
+        handle = bleakGATTChar.handle
+
+        # Reading measurement response
+        if self._handle_service[handle] > 0:
+            sensor_id = self._handle_service[handle] - 1
+            self.process_measurement_response(sensor_id, data)
+            
+
         # Reading device response
         elif self._handle_service[handle] == self.SENSOR_SERVICE_ID:
-            # Received single data packet
-            if (data[0] is self.GRSP_RESULT):
-                # Valid data 
-                if data[1] == 0x00:
-                    if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
-                        self._data_packet = data[3:]
-                    elif data[2] is self.GCMD_CUSTOM_CMD:
-                        self._data_packet = data[3:]
-                        self._data_stack[self.SENSOR_SERVICE_ID] = self._data_packet
-                        auto_id_packet = await self._decode_auto_id_packet(self.SENSOR_SERVICE_ID)
-
-                        i = 0
-                        if len(auto_id_packet):
-                            for sensor in self._setup_sensors:
-                                if sensor['sensor_id'] == '' and sensor['plug_detect'] == 1:
-                                    sensor['sensor_id'] = auto_id_packet[i] if auto_id_packet[i] != 0 else ''
-                                    i+=1
-                        
-                            self.get_sensor_datasheet_info()
-
-
-            # TODO: Get factory calibration
-            elif (data[0] == 0x0A):
-                factory_cal_params = {data[1]: []}
-                #self._factory_cal_params[data[1]] = []
-                num_params = 4
-                byte_len = 4
-                cal_data = data[2:]
-                for p in range(num_params):
-                    byte_value = 0
-                    for d in range(byte_len):
-                        stack_value = cal_data.pop(0)
-                        byte_value += stack_value * (2**(8*d))
-
-                    param = self._binary_float(byte_value, byte_len)
-                    factory_cal_params[data[1]].append(param)
-
-                # Save factory calibration parameters to measurement
-                for m_id, m in self._device_measurements[self._notify_sensor_id].items():
-                    if 'FactoryCalOrder' in m and m['FactoryCalOrder'] in factory_cal_params:
-                        m['FactoryCalParams'] = factory_cal_params[m['FactoryCalOrder']]
-
-            elif (data[0] == 0x0B):
-                self._notify_sensor_id = None
-
+            self.process_device_response(data)
+            
 
     async def check_callback(self):
         # checks for a callback from the _notify_callback() function
@@ -672,6 +743,7 @@ class PASCOBLEDevice():
         Args:
             measurement (string): name of measurement we want to read
         """
+
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
 
@@ -684,6 +756,7 @@ class PASCOBLEDevice():
                 raise self.MeasurementNotFound
             
             self._get_sensor_measurements(sensor_id)
+
 
             return self._data_results[measurement]
 
@@ -781,28 +854,20 @@ class PASCOBLEDevice():
 
     def _get_sensor_measurements(self, sensor_id):
         service_id = sensor_id + 1
+        print(f"service_id = {service_id}")
 
-        for sensor_name, sensor in self._sensors.items():
+        for sensor in self._device_channels:
             if sensor['id'] == sensor_id:
                 packet_size = sensor['total_data_size']
 
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
-        
-        # request data
-        # read response
-        # these need to be gathered and executed as a group so they 
-        # block the execution of the rest of the program
 
         self._loop.run_until_complete(self.write_await_callback(service_id, one_shot_cmd))
 
-        # self._notify_sensor_id = sensor_id
-
-        # self._loop.run_until_complete(self.write_await_callback(service_id, one_shot_cmd))
-        # self._loop.run_until_complete(self._single_listen(service_id))
-
         # process the data
         self._data_stack[sensor_id] = self._data_packet
+        print(self._data_stack)
         self._decode_data(sensor_id)
 
 
@@ -847,7 +912,7 @@ class PASCOBLEDevice():
 
         Args:
             value (int): Integer value we want to convert
-            byteLength (int): Number of bytes the integer is suppoed to be
+            byteLength (int): Number of bytes the integer is supposed to be
 
         Returns:
             Two' complement of an integer value
@@ -910,15 +975,16 @@ class PASCOBLEDevice():
         return (count * x) / r
 
     
-    async def _decode_auto_id_packet(self, sensor_id):
+    def _decode_auto_id_packet(self, sensor_id):
 
         plug_count = 0
-        for sensor in self._setup_sensors:
+        for sensor in self._device_channels:
             if sensor['plug_detect'] == 1:
                 plug_count += 1
 
         results = []
 
+        
         if len(self._data_stack[sensor_id]):
             for i in range(plug_count):
                 byte_value = 0
@@ -934,7 +1000,7 @@ class PASCOBLEDevice():
     def _decode_data(self, sensor_id):
         try:
             self._sensor_data_prev[sensor_id] = self._sensor_data[sensor_id].copy()
-            self._sensor_data[sensor_id] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor_id].items() }
+            # self._sensor_data[sensor_id] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor_id].items() }
 
             for m_id, raw_m in self._device_measurements[sensor_id].items():
                 result_value = None
