@@ -2,6 +2,7 @@ import asyncio
 import math
 import nest_asyncio
 import os
+import sys
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -67,7 +68,7 @@ class PASCOBLEDevice():
         self._measurement_sensor_ids = {}
 
         # Load Datasheet
-        package_path = os.path.dirname(os.path.abspath(__file__))
+        package_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         datasheet_path = os.path.join(package_path, 'datasheets.xml')
         tree = ET.parse(datasheet_path)
         self._xml_root = tree.getroot()

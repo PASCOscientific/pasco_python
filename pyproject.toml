@@ -1,3 +1,39 @@
 [build-system]
-requires = ["setuptools >= 40.6.0", "wheel", "bleak", "nest_asyncio"]
+requires = ["setuptools>=61.2", "bleak", "nest_asyncio"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pasco"
+version = "0.3.65"
+authors = [{name = "Waqas Saeed"}]
+description = "PASCO Python API for Wireless Sensors"
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: Other/Proprietary License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: Unix",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "bleak==0.20.2",
+    "nest_asyncio==1.5.6",
+]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/PASCOscientific/pasco_python/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.setuptools.package-data]
+pasco = ["datasheets.xml"]
