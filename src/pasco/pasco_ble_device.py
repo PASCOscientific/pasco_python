@@ -370,7 +370,7 @@ class PASCOBLEDevice():
                     'measurements': [],
                     'total_data_size': 0,
                     'plug_detect': int(c.get('PlugDetect')) if 'PlugDetect' in c.attrib else 0,
-                    'channel_id_tag': int(c.get('ChannelIDTag')) if 'ChannelIDTag' in c.attrib else '',
+                    'channel_id_tag': c.get('ChannelIDTag') if 'ChannelIDTag' in c.attrib else '',
                     'factory_cal_ids': []
                 }
                 for c in interface.findall("./Channel")
@@ -509,7 +509,11 @@ class PASCOBLEDevice():
             raise self.InvalidParameter
 
         if sensor_name == None:
-            measurement_list = [sensor['measurements'] for sensor in self._device_channels]
+            measurement_list = []
+            for sensor_measures in [sensor['measurements'] for sensor in self._device_channels]:
+                for measure in sensor_measures:
+                    measurement_list.append(measure)
+                    
         elif sensor_name in self._sensor_names:
             measurement_list = self._sensor_names[sensor_name]['measurements']
         else:
@@ -854,7 +858,7 @@ class PASCOBLEDevice():
 
     def _get_sensor_measurements(self, sensor_id):
         service_id = sensor_id + 1
-        print(f"service_id = {service_id}")
+        # print(f"service_id = {service_id}")
 
         for sensor in self._device_channels:
             if sensor['id'] == sensor_id:
@@ -867,7 +871,7 @@ class PASCOBLEDevice():
 
         # process the data
         self._data_stack[sensor_id] = self._data_packet
-        print(self._data_stack)
+        # print(self._data_stack)
         self._decode_data(sensor_id)
 
 
