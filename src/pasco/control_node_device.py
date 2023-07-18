@@ -65,16 +65,13 @@ class ControlNodeDevice(PASCOBLEDevice):
             
             self._get_sensor_measurements(sensor_id)
             
-            # TODO: make this work
             if type(port) == int:
                 # print([data for data in self._response_data])
                 # if we're getting a response for a servo resistance, interpret it as onboard sensor data
                 onboard_sensor_data = list(unpack('<xxxhhhbb', self._response_data))
-                print([data for data in self._response_data])
-                print(onboard_sensor_data)
                 # the data for the servo resistance is indices 3 and 4 of the response
                 return onboard_sensor_data[port+2]*12.5
-
+            
             measurement_id = None
             for m_id, m in self._device_measurements[sensor_id].items():
                 if m['NameTag'] == measurement:
@@ -279,7 +276,6 @@ class ControlNodeDevice(PASCOBLEDevice):
             degrees_remaining = self.get_stepper_remaining()
             while degrees_remaining[0] > 0 or degrees_remaining[1] > 0:
                 degrees_remaining = self.get_stepper_remaining()
-                print(degrees_remaining)
         
 
 
@@ -449,7 +445,7 @@ class ControlNodeDevice(PASCOBLEDevice):
         
         if output_type.lower() == 'terminal':
             # convert a percentage (0-100) to a duty cycle value (1-254)
-            duty_cycle = int(2.54*abs(value) + 1)
+            duty_cycle = int(2.53*abs(value) + 1)
             # If the power percent is positive we want to rotate forward
             # so we send the signal to the first of the control pins for the channel.
             # If it's negative we want to rotate backward 

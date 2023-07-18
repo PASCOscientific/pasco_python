@@ -48,14 +48,14 @@ Another key part of `pasco_ble_device.py` is how it represents the device intern
 2. Sensors available through the interface
 3. Measurements provided by the sensors
 
-When a pasco device connects it tells the computer its interface id, which is then looked up in `datasheets.xml` This datasheet tells the computer what communication channels are available on the device, including sensors, outputs (like speakers), and plugin locations (such as the ports on the control node). This initializing is handled by `initialize_device()`. 
+When a pasco device connects it tells the computer its interface id, which is then looked up in `datasheets.py` This datasheet tells the computer what communication channels are available on the device, including sensors, outputs (like speakers), and plugin locations (such as the ports on the control node). This initializing is handled by `initialize_device()`. 
 
 `initialize_device()` uses `datasheets.xml` to first get data about the interface channels, then pass this to `initialize_device_sensors()`. This calls `_initialize_sensor()` on each sensor in turn to get data on the sensor and the measurements it provides. Finally the sensor and measurement lists are saved in several instance attributes.
 
 ### Plugin Sensors
 Working with the control node's plugin sensors requires some special handling provided by several functions with `controlnode_plugins` in the name. 
 
-The most important is `update_controlnode_plugin_sensor()`. When a sensor is plugged in or unplugged from the control node it sends a callback with the sensor IDs plugged into ports A, B, and Sensor. This callback is handled by `_notify_callback()`, which calls `process_measurement_response()`, which calls `update_controlnode_plugin_sensor()`. This unpacks the data about the sensors plugged in and passes the new sensor list to `initialize_device_sensors`, updating the internal sensor list. This process is executed by `scan_controlnode_plugins()` during the control node's connect sequence.
+The most important is `update_controlnode_plugin_sensor()`. When a sensor is plugged in or unplugged from the control node it sends a callback with the sensor IDs plugged into ports A, B, and Sensor. This callback is handled by `_notify_callback()`, which calls `process_measurement_response()`, which calls `update_controlnode_plugin_sensor()`. This unpacks the data about the sensors plugged in and passes the new sensor list to `initialize_device_sensors`, updating the internal sensor list. This process is initiated by `scan_controlnode_plugins()` during the control node's connect sequence, and repeated whenever a sensor is plugged in or unplugged from the control node.
 
 ---
 ## `control_node_device.py`
@@ -64,4 +64,24 @@ This file handles functionality specific to the control node. It inherits from `
 ### Reading Data
 An important feature of the control node is the ability to plug in sensors, such as a range finder and two high speed steppers on the pasco bot. Unfortunately the internal representation of sensors and measurements in `pasco_ble_device.py` does not support a distinction between two of the same sensors plugged into two different ports. Because this is a control node specific issue we put the solution in `control_node_device.py`. 
 
-In `ControlNodeDevice.read_data()` there is an optional parameter of port, allowing you to designate which port you want to read data from. This is really only for the situation of two steppers plugged into ports A and B, but that situation is fairly common. Consider `read_data(measurement='Angle', port='A')` sent to a pasco bot. The `Angle` measurement is available from the steppers in both ports `A` and `B`, so `read_data` uses the `port` parameter to designate which stepper from which to read the angle. Then when the callback comes for the `Angle` reading, we extract the measurement from the `_sensor_data` instance variable
+In `ControlNodeDevice.read_data()` there is an optional parameter of port, allowing you to designate which port you want to read data from.  Consider `read_data(measurement='Angle', port='A')` sent to a pasco bot. The `Angle` measurement is available from the steppers in both ports `A` and `B`, so `read_data` uses the `port` parameter to designate which stepper from which to read the angle. Then when the callback comes for the `Angle` reading, we extract the measurement from the `_sensor_data` instance variable. A similar process is used to read the servo current.
+
+### Steppers
+There are three different types of commands sent to steppers:
+
+1. Rotate stepper(s) continuously
+2. Rotate stepper(s) through
+3. Stop stepper(s)
+
+These work exactly like the blockly blocks. 
+
+### Servos
+Servos come in two flavors: continuous and standard. The standard servo rotates to a degree angle in [-90, 90], while the continuous servo rotates at a percent power in [-100, 100].
+`set_servos()` takes arguments of servo types in servo ports 1 and 2 and values for those servos.
+
+### Power Board
+The power board has two channels and can be plugged into port A or B. 
+The two channels are independently controlled and can either output a PWM signal (for DC motors) or a 0V/5V signal (for USB devices).
+
+### Plugin Sensors
+Additional sensors (such as line follower, rangefinder, and greenhouse) can be plugged into the Sensor port. They work just like any other sensor, accessible by `read_data('measurement name')`

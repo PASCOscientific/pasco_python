@@ -2,12 +2,6 @@
 //control.Node testing
 Corbin Weiss
 5/23/2023 Begun
-Testing sensing ability. Getting None for acceleration or raw data on position.
-Meanwhile the //code.Node is working fine and //control.Node works great on SPARKvue.
-
-Testing speakers: set_sound_frequency works great.
-Testing servos: standard servos work.
-Testing steppers: kind of works. They keep running exactly as long as the program is running.  
 
 Objectives:
 Create and test functionality for all functions of the 
@@ -34,15 +28,14 @@ Each block has dropdown options
 many have numeric input options as well
 """
 
-from src.pasco import ControlNodeDevice
+from src.pasco.pasco_ble_device import PASCOBLEDevice
+from src.pasco.control_node_device import ControlNodeDevice
 import time
 import asyncio
 
 
-# ------------ Read Data ------------
-# Do we eventually want to be able to read data while other processes are going?
-# e.g. a line following program who reads light data while running steppers
-# In that case we will need to rethink the data reading method
+# ------------ Acceleration sensor sample rate benchmark ------------
+
 def test_read_data():
     print("Testing Read Data")
     start = time.monotonic()
@@ -53,18 +46,31 @@ def test_read_data():
     print(f"{100/(end-start)} Hz sample rate")
 
 
-# ------------ Set Steppers -----------
-def test_steppers_continous():
+# ------------ Steppers -----------
+def test_steppers_continuous():
     print("rotating both steppers continuously")
     controlNode.rotate_steppers_continuously(360, 360, -360, 360)
     time.sleep(1)
-    controlNode.stop_steppers(90, 360)
+    print(f"""
+    A is rotating at {controlNode.read_data('AngularVelocity', 'A')} rad/s
+    B is rotating at {controlNode.read_data('AngularVelocity', 'B')} rad/s
+    """)
     time.sleep(1)
+    controlNode.stop_steppers(360, 360)
 
 def test_steppers_through():
-    print("rotating both steppers through")
-    controlNode.rotate_steppers_through(360, 90, 720, 360, 90, 720, await_completion=True)
-    controlNode.stop_steppers(360, 360)
+    print("""
+    rotating both steppers through
+    A: 180 degrees
+    B: 360 degrees
+          """)
+    controlNode.read_data('Angle', 'A')
+    controlNode.read_data('Angle', 'B')
+    controlNode.rotate_steppers_through(360, 360, 180, 360, 360, 360, True)
+    print(f"""
+    A rotated {controlNode.read_data('Angle', 'A')} degrees
+    B rotated {controlNode.read_data('Angle', 'B')} degrees
+    """)
 
 def test_steppers_complex():
     print("rotating A stepper continuously")
@@ -75,7 +81,6 @@ def test_steppers_complex():
     print("stopping stepper A")
     controlNode.stop_stepper("A", 90)
     time.sleep(3)
-
 
 
 # ------------ Set Servos -------------
@@ -90,8 +95,18 @@ def test_servos():
     controlNode.set_servos(0, 0, "standard", 0)
     time.sleep(1)
     print("done")
-# ----------- Set Power out -----------
 
+
+# ----------- Set Power out -----------
+def test_power_board():
+    controlNode.set_power_out('b', 1, 'terminal', 100)
+    time.sleep(1)
+    controlNode.set_power_out('b', 2, 'usb', 1)
+    controlNode.set_power_out('a', 2, 'usb', 1)
+    time.sleep(1)
+    controlNode.set_power_out('b', 1, 'usb', 0)
+    controlNode.set_power_out('b', 2, 'usb', 0)
+    controlNode.set_power_out('a', 2, 'usb', 0)
 
 
 # -------- Set Sound Frequency --------
@@ -101,33 +116,22 @@ def test_sound():
     controlNode.set_sound_frequency(0)
     time.sleep(1)
 
-# The following was based on a misunderstanding of how stepper angle readings work.
-# -------- Stepper Sensors -----------
-def test_stepper_sensor():
-    controlNode.rotate_steppers_continuously(360, 360, -360, 360)
-    start = time.monotonic()
-    print(f"A      B")
-    for i in range(10):
-        print(f"{controlNode.read_data('Angle', 'A'):.2f} {controlNode.read_data('Angle', 'B'):.2f}")
 
-    stop = time.monotonic()
-    print(f"time elapsed: {stop-start} seconds")
-    print(f"sample rate: {10/(stop-start)} Hz")
-    time.sleep(1)
-    controlNode.stop_steppers(360, 360)
-    print("---stopped---")
+# ------- Servo current -----------
+# We need a way to differentiate between the servos
+def test_servos_current():
+    controlNode.set_servo(2, "standard", 20)
+    for i in range(20):
+        print(controlNode.read_data('ServoCurrentOrd', 2))
+        time.sleep(0.1)
+    controlNode.set_servos(0, 0, 0, 0)
 
-    print(f"{controlNode.read_data('Angle', 'B'):.2f} {controlNode.read_data('Angle', 'A'):.2f}")
-    
-
-# -------- get_stepper_info -----------
 
 if __name__ == "__main__":
     controlNode = ControlNodeDevice()
     controlNode.connect_by_id('651-400')
-    # test_stepper_sensor()
+    test_steppers_continuous()
     test_steppers_through()
-    controlNode.reset()
     controlNode.disconnect()
 
 
