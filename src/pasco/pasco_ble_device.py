@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 from bleak import BleakClient, BleakGATTCharacteristic, BleakScanner
 from bleak.backends.device import BLEDevice
+from .datasheets import datasheet
 from uuid import UUID
 
 
@@ -84,10 +85,8 @@ class PASCOBLEDevice():
         CTRLNODE_CMD_DETECT_DEVICES = 2         # Detects which devices are attached
 
         # Load Datasheet
-        package_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        datasheet_path = os.path.join(package_path, 'datasheets.xml')
-        tree = ET.parse(datasheet_path)
-        self._xml_root = tree.getroot()
+        # it is saved as a string literal variable in datasheets.py
+        self._xml_root = ET.fromstring(datasheet)
 
         self._compatible_devices = [
             '//code.Node',
@@ -858,7 +857,7 @@ class PASCOBLEDevice():
 
     def _get_sensor_measurements(self, sensor_id):
         service_id = sensor_id + 1
-        # print(f"service_id = {service_id}")
+
 
         for sensor in self._device_channels:
             if sensor['id'] == sensor_id:
@@ -871,7 +870,6 @@ class PASCOBLEDevice():
 
         # process the data
         self._data_stack[sensor_id] = self._data_packet
-        # print(self._data_stack)
         self._decode_data(sensor_id)
 
 

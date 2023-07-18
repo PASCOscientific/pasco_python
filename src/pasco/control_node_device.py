@@ -34,8 +34,9 @@ class ControlNodeDevice(PASCOBLEDevice):
     STEPPER_B_CHANNEL = 2
     BOTH_STEPPER_CHANNEL = 3
 
-    PLUGIN_CHANNELS = {'A': 0, 'B': 1, 'sensor': 2}
-
+    PLUGIN_CHANNELS = {'A': 0, 'B': 1, 'sensor': 2, 1: 3, 2: 3}
+    # the 1: 3, 2: 3 are for the servo plugin locations. 
+    # they get their response data on the onboard sensor channel.
 
 
 # ----------- Reading Data --------------
@@ -43,9 +44,8 @@ class ControlNodeDevice(PASCOBLEDevice):
         """
         Read a sensor measurement
 
-        Args:
             measurement (string): name of measurement we want to read
-            port (string) (optional): port of sensor from which we want the measurement
+            port (string | int) (optional): port of sensor from which we want the measurement
         """
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
@@ -57,13 +57,23 @@ class ControlNodeDevice(PASCOBLEDevice):
                 # interpret the port to query the appropriate sensor
                 # such as for sensing from two high-speed steppers plugged into ports A and B
                 if port != None:
-                    sensor_id = self.PLUGIN_CHANNELS[port.upper()]
+                    sensor_id = self.PLUGIN_CHANNELS[port]
                 else:
                     sensor_id = self._measurement_sensor_ids[measurement]
             except:
                 raise self.MeasurementNotFound
             
             self._get_sensor_measurements(sensor_id)
+            
+            # TODO: make this work
+            if type(port) == int:
+                # print([data for data in self._response_data])
+                # if we're getting a response for a servo resistance, interpret it as onboard sensor data
+                onboard_sensor_data = list(unpack('<xxxhhhbb', self._response_data))
+                print([data for data in self._response_data])
+                print(onboard_sensor_data)
+                # the data for the servo resistance is indices 3 and 4 of the response
+                return onboard_sensor_data[port+2]*12.5
 
             measurement_id = None
             for m_id, m in self._device_measurements[sensor_id].items():
@@ -260,10 +270,6 @@ class ControlNodeDevice(PASCOBLEDevice):
         """
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
-        
-        if await_completion:
-            init_angle_A = self.read_data('Angle', 'A')
-            init_angle_B = self.read_data('Angle', 'B')
 
         self._send_stepper_command(
             speedA, accelerationA, distanceA, speedB, accelerationB, distanceB
@@ -363,26 +369,99 @@ class ControlNodeDevice(PASCOBLEDevice):
         else:
             raise self.InvalidParameter()
 
-    
+
 # --------- Power Board ----------------
 
-
-    # TODO: Test this
-    def set_power_out(self):
+    def set_power_out(self, port: str, channel: int, output_type: str, value):
         """
         Control the power output board
 
         Args:
+            port (str): Power Out port
+            channel (int): Channel of the power output board
+            output (either 'USB' or 'terminal'): output location
+            value (0|1 for USB output or % for terminal): ON/OFF or % power
+
+        The request message is as follows:
+        - 0x05: we're talking to power out ports A and B
+        - whichPins: encode which pins we want to control
+        - LSB of PWM period (0xD0) <- we don't mess with these
+        - MSB of PWM period (07)   <- we don't mess with these
+        - A0 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output A0
+        - A1 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output A1
+        - A2 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output A2
+        - A3 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output A3
+        - B0 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output B0
+        - B1 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output B1
+        - B2 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output B2
+        - B3 value // On (255), Off (0), or Duty cycle (1 to 254) for PWM on output B3
+
+        The Power Out ports A and B have four wires each that control the power out board:
+        A0,A1 A2,A3
+        -CH1- -CH2-  
+        Each of these can be set to 0V, +5V, or a PWM
+        The combination of port and channel is used to determine the wires (aka pins) we are controlling.
+        Our set of pins we want to control is encoded as a single number corresponding to a binary 
+        representation of the pins:
+        __ __ __ __ __ __ __ __
+        B3 B2 B1 B0 A3 A2 A1 A0
+        Controlling A1 and A0 (port A channel 1) would be indicated by sending 11 in binary (3)
+        Controlling B3 and B2 (port B channel 2) would be indicated by sending 11000000 in binary (192)
+
+        The values of our pins control the power going to them:
+            A0: USB Vbus pin and terminal pin labeled '+' for channel 1
+            A1: USB Vbus gnd and unlabeled terminal pin for channel 1
+            A2: USB Vbus pin and terminal pin labeled '+' for channel 2
+            A3: USB Vbus gnd and unlabeled terminal pin for channel 2
+
         """
-        signalBits = 2
-        pwmPeriod = 1000
-        pwmValues = [10, 10, 10, 10, 10, 10, 10, 10]
+        # 1. Where are we talking?
+        # port and channel are used to figure out which_pins
+        # A CH1 -> 11       -> 3
+        # A CH2 -> 1100     -> 12
+        # B CH1 -> 110000   -> 48
+        # B CH2 -> 11000000 -> 192
+        # each one is 4 times the last one
+        encode_which_pins = {
+            ('A', 1): 3,
+            ('A', 2): 12,
+            ('B', 1): 48,
+            ('B', 2): 192,
+            }
+        which_pins = encode_which_pins[(port.upper(), channel)]
+
+        first_pin_indices = {
+            ('A', 1): 0,
+            ('A', 2): 2,
+            ('B', 1): 4,
+            ('B', 2): 6,
+            }
+        first_pin_index = first_pin_indices[(port.upper(), channel)]
+
+        # 2. What are we talking to? USB or terminal?
+        LSB_PWM_period = 0xd0 if output_type == 'terminal' else 0x00
+        MSB_PWM_period = 0x07 if output_type == 'terminal' else 0x00
+        # these values will be what we end up sending
+        values = [0, 0, 0, 0, 0, 0, 0, 0]
+
+        if output_type.upper() == 'USB':
+            values[first_pin_index] = 255 if int(value) > 0 else 0
         
-        cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_SET_SIGNALS, signalBits, 
-            pwmPeriod & 0xFF, pwmPeriod>>8 & 0XFF,
-            pwmValues[0], pwmValues[1], pwmValues[2], pwmValues[3],
-            pwmValues[4], pwmValues[5], pwmValues[6], pwmValues[7]
+        if output_type.lower() == 'terminal':
+            # convert a percentage (0-100) to a duty cycle value (1-254)
+            duty_cycle = int(2.54*abs(value) + 1)
+            # If the power percent is positive we want to rotate forward
+            # so we send the signal to the first of the control pins for the channel.
+            # If it's negative we want to rotate backward 
+            # so we send the signal to the second of the control pins for the channel
+            i = first_pin_index if value >= 0 else first_pin_index + 1
+            values[i] = duty_cycle
+
+        
+        cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_SET_SIGNALS, which_pins, 
+            LSB_PWM_period, MSB_PWM_period
         ]
+        cmd.extend(values)
         self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
 

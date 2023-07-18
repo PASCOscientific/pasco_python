@@ -1,4 +1,4 @@
-<!DOCTYPE Datasheets>
+datasheet = '''<!DOCTYPE Datasheets>
   <Datasheets Version="1.0">
     <GenericMeasurements>
       <Measurement ID="0" Tag="None" UnitGroup="None"/>
@@ -3519,3 +3519,4 @@
       </Output>
     </Outputs>
   </Datasheets>
+'''
