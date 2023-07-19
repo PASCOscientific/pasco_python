@@ -17,19 +17,27 @@ pip install pasco
 ```
 
 
-In your project file, import the `PASCOBLEDevice` class and/or the `CodeNodeDevice` class.
+In your project file, import the `PASCOBLEDevice` class and/or the `CodeNodeDevice` class or `ControlNodeDevice` class.
 
 To connect to a regular wireless sensor
 
 ```
-from pasco import PASCOBLEDevice
+from src.pasco.pasco_ble_device import PASCOBLEDevice 
+# src is necessary until pip repository is updated
 ```
 
 To connect to a /\/code.Node (Note: The Icons package is optional)
 
 ```
-from pasco import CodeNodeDevice, Icons
+from src.pasco.code_node_device import CodeNodeDevice, Icons
 ```
+
+To connect to a /\/control.Node
+
+```
+from src.pasco.control_node_device import ControlNodeDevice
+```
+
 
 # Compatible Sensors
 
@@ -65,9 +73,11 @@ Testing
 
 ## Device Structure
 
-Device: A physical PASCO wireless sensor is a device
-Sensor: A device can have multiple sensors built in
-Measurements: A sensor can offer multiple measurements
+Device: A physical PASCO wireless sensor is a device.
+
+Sensor: A device can have multiple sensors built in.
+
+Measurements: A sensor can offer multiple measurements.
 
 **Device Structure Example**
 
@@ -193,7 +203,7 @@ In order to connect to a /\/code.Node we must import the `CodeNodeDevice` object
 
 ```
 
-from pasco import CodeNodeDevice, Icons
+from src.pasco.code_node_device import CodeNodeDevice, Icons
 
 ```
 
@@ -308,7 +318,7 @@ Turn the 5x5 LED display, RGB LED and speaker off.
 Connect to a Wireless Temperature Sensor and get one reading:
 
 ```
-from pasco import PASCOBLEDevice
+from src.pasco.pasco_ble_device import PASCOBLEDevice
 
 
 temp_sensor = PASCOBLEDevice()
@@ -323,7 +333,7 @@ temp_sensor.disconnect()
 ## Example 1B: One shot read and display units
 
 ```
-from pasco import PASCOBLEDevice
+from src.pasco.pasco_ble_device import PASCOBLEDevice
 
 
 temp_sensor = PASCOBLEDevice()
@@ -342,7 +352,7 @@ temp_sensor.disconnect()
 Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement. We do not need to specify a device type. We will continuously read and display the result.
 
 ```
-from pasco import PASCOBLEDevice
+from src.pasco.pasco_ble_device import PASCOBLEDevice
 
 
 my_sensor = PASCOBLEDevice()
@@ -372,7 +382,7 @@ my_sensor.disconnect()
 Below is a simple example that shows how to connect to a /\/code.Node, read a measurement and control an output.
 
 ```
-from pasco import CodeNodeDevice
+from src.pasco.code_node_device import CodeNodeDevice
 
 
 code_node = CodeNodeDevice()
@@ -394,7 +404,8 @@ code_node.reset()
 We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
 
 ```
-from pasco import PASCOBLEDevice, CodeNodeDevice, Icons
+from src.pasco.pasco_ble_device import PASCOBLEDevice
+from src.pasco.code_node_device import CodeNodeDevice, Icons
 
 
 code_node_device = CodeNodeDevice()
@@ -442,3 +453,22 @@ for i in range (1000):
 code_node_device.disconnect()
 force_accel_device.disconnect()
 ```
+## Working with the /\/control.Node
+The control node has an internal speaker and x,y,z acceleration sensor. But what makes the control node unique is that it can also connect to external sensors such as a rangefinder and stepper sensors. Any sensor plugged into the control node is automatically accessible just like a built-in sensor. 
+
+If you know the 6-digit code of your control node device, you can just connect:
+
+    from src.pasco.control_node_device import ControlNodeDevice
+
+    controlNode = ControlNodeDevice()
+    controlNode.connect_by_id('664-591')
+
+The control node can control steppers, servos, and a power output board. For example
+
+    controlNode.rotate_steppers_continuously(360, 360, 360, 360)
+    time.sleep(1)
+    controlNode.stop_steppers(360, 360)
+    controlNode.read_data('Angle', 'A')
+
+accelerates both steppers to 360 deg/s at an acceleration of 360 deg/s/s, waits a second, stops them at an acceleration of 360 deg/s/s, and reads the angle of stepper A.
+More examples of steppers, servos, plugin sensors, and the power output board are in `controlnode_examples.py` and `grabberbot.py`.

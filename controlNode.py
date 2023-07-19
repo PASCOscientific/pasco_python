@@ -6,32 +6,10 @@ Corbin Weiss
 Objectives:
 Create and test functionality for all functions of the 
 //control.Node defined in SPARKvue.
-- read value of sensor
-    - inherited from pasco_ble_device
-- speaker
-    - set frequency
-    - turn on/off
-- zero sensor
-- servo
-    - port input, set angle or rotate at speed
-- high speed stepper
-    - units input
-    - port
-    - rotate type
-    - max speed
-    - acceleration
-
-- low speed stepper
-
-------------
-Each block has dropdown options
-many have numeric input options as well
 """
 
-from src.pasco.pasco_ble_device import PASCOBLEDevice
 from src.pasco.control_node_device import ControlNodeDevice
 import time
-import asyncio
 
 
 # ------------ Acceleration sensor sample rate benchmark ------------
@@ -118,7 +96,6 @@ def test_sound():
 
 
 # ------- Servo current -----------
-# We need a way to differentiate between the servos
 def test_servos_current():
     controlNode.set_servo(2, "standard", 20)
     for i in range(20):

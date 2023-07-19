@@ -167,8 +167,10 @@ class ControlNodeDevice(PASCOBLEDevice):
         speedB = speedB * mul[1] * self.DECISTEPS_PER_STEP * self.STEPS_PER_REV / self.DEGREES_PER_REV
         accelerationA = accelerationA * mul[0] * self.DECISTEPS_PER_STEP * self.STEPS_PER_REV / self.DEGREES_PER_REV
         accelerationB = accelerationB * mul[1] * self.DECISTEPS_PER_STEP * self.STEPS_PER_REV / self.DEGREES_PER_REV
-        distanceA = 0 if continous1 else distanceA * mul[0] * self.STEPS_PER_REV / self.DEGREES_PER_REV
-        distanceB = 0 if continous2 else distanceB * mul[1] * self.STEPS_PER_REV / self.DEGREES_PER_REV
+        distanceA = 0 if continous1 else abs(distanceA) * mul[0] * self.STEPS_PER_REV / self.DEGREES_PER_REV
+        distanceB = 0 if continous2 else abs(distanceB) * mul[1] * self.STEPS_PER_REV / self.DEGREES_PER_REV
+        # we have to take abs() of the distances because if the 
+        # user enters a negative distance the stepper will rotate infinitely
 
         speedA = int(self._limit( speedA, -19200, 19200 ))
         accelerationA = int(self._limit( accelerationA, 0, 65535 ))
@@ -493,6 +495,10 @@ class ControlNodeDevice(PASCOBLEDevice):
         self.set_sound_frequency(0)
         self.set_servos(0, 0, 0, 0)
         self.rotate_steppers_through(0, 0, 0, 0, 0, 0)
+        self.set_power_out('A', 1, 'USB', 0)
+        self.set_power_out('A', 2, 'USB', 0)
+        self.set_power_out('B', 1, 'USB', 0)
+        self.set_power_out('B', 2, 'USB', 0)
 
 
 def main():
