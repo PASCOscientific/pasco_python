@@ -240,7 +240,7 @@ class PASCOBLEDevice():
 
         try:
             self._loop.run_until_complete(self._async_connect())
-            self.keepalive()
+            # self.keepalive()
         except:
             raise self.BLEConnectionError('Could not connect to the sensor')
 
@@ -682,7 +682,9 @@ class PASCOBLEDevice():
         if (data[0] is self.GRSP_RESULT):
             # Valid data 
             if data[1] == 0x00:
-                if data[2] is self.GCMD_READ_ONE_SAMPLE: # Get single measurement packet
+                # Get single measurement packet
+                # the self.GCMD_CONTROL_NODE_CMD allows get_stepper_remaining to work
+                if data[2] is self.GCMD_READ_ONE_SAMPLE or self.GCMD_CONTROL_NODE_CMD:
                     self._data_packet = data[3:]
                     
 
@@ -717,9 +719,11 @@ class PASCOBLEDevice():
 
 
     async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
-        # place the callback in the queue so we can synchronize off of it
-        await self._queue.put(True)
         handle = bleakGATTChar.handle
+        # check that we're getting a valid callback, not just a battery status update
+        if data[0] in [0xC0, 0x82]:
+            # place the callback in the queue so we can synchronize off of it
+            await self._queue.put(True)
 
         # Reading measurement response
         if self._handle_service[handle] > 0:
@@ -864,10 +868,8 @@ class PASCOBLEDevice():
 
         return None
     
-
-    def _get_sensor_measurements(self, sensor_id):
+    def _request_sensor_data(self, sensor_id):
         service_id = sensor_id + 1
-
 
         for sensor in self._device_channels:
             if sensor['id'] == sensor_id:
@@ -875,9 +877,12 @@ class PASCOBLEDevice():
 
         one_shot_cmd = [ self.GCMD_READ_ONE_SAMPLE, packet_size ]
 
-
         self._loop.run_until_complete(self.write_await_callback(service_id, one_shot_cmd))
 
+
+    def _get_sensor_measurements(self, sensor_id):
+        # request data
+        self._request_sensor_data(sensor_id)
         # process the data
         self._data_stack[sensor_id] = self._data_packet
         self._decode_data(sensor_id)

@@ -40,6 +40,7 @@ class ControlNodeDevice(PASCOBLEDevice):
 
 
 # ----------- Reading Data --------------
+
     def read_data(self, measurement: str, port=None):
         """
         Read a sensor measurement
@@ -53,32 +54,29 @@ class ControlNodeDevice(PASCOBLEDevice):
         if measurement == None or type(measurement) is not str:
             raise self.InvalidParameter
         else:
-            try:
-                # interpret the port to query the appropriate sensor
-                # such as for sensing from two high-speed steppers plugged into ports A and B
-                if port != None:
-                    sensor_id = self.PLUGIN_CHANNELS[port]
-                else:
-                    sensor_id = self._measurement_sensor_ids[measurement]
-            except:
-                raise self.MeasurementNotFound
-            
-            self._get_sensor_measurements(sensor_id)
+            if port == None:
+                return super().read_data(measurement)
+                
+            elif type(port) == str:
+                # If the port is A or B, then we are sensing two steppers. 
+                # Interpret the plugin channel to query the correct sensor, and read data as usual
+                sensor_id = self.PLUGIN_CHANNELS[port]
+                self._get_sensor_measurements(sensor_id)
+                measurement_id = None
+                for m_id, m in self._device_measurements[sensor_id].items():
+                    if m['NameTag'] == measurement:
+                        measurement_id = m_id
+                return self._sensor_data[sensor_id][measurement_id]
             
             if type(port) == int:
-                # print([data for data in self._response_data])
-                # if we're getting a response for a servo resistance, interpret it as onboard sensor data
-                onboard_sensor_data = list(unpack('<xxxhhhbb', self._response_data))
+                # If we're getting a response for a servo resistance, query the onboard sensor
+                # Because we are interpreting the data manually we need to query manually.
+                self._request_sensor_data(sensor_id=self.PLUGIN_CHANNELS[port])
+                onboard_sensor_data = list(unpack('<hhhbb', self._data_packet))
                 # the data for the servo resistance is indices 3 and 4 of the response
                 return onboard_sensor_data[port+2]*12.5
-            
-            measurement_id = None
-            for m_id, m in self._device_measurements[sensor_id].items():
-                if m['NameTag'] == measurement:
-                    measurement_id = m_id
-
-            return self._sensor_data[sensor_id][measurement_id]
-
+        
+        return self.MeasurementNotFound
     
 
 
@@ -117,7 +115,7 @@ class ControlNodeDevice(PASCOBLEDevice):
         - steps remaining for port A extra bit
         - steps remaining for port B extra bit
         """
-        raw_stepper_info = list(unpack('<xxxhhhhbb', self._response_data))
+        raw_stepper_info = list(unpack('<hhhhbb', self._data_packet))
         # add in the extra bits for steps remaining
         raw_stepper_info[0] += raw_stepper_info[4] << 16
         raw_stepper_info[1] += raw_stepper_info[5] << 16
