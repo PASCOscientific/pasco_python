@@ -427,6 +427,16 @@ class PASCOBLEDevice():
         except:
             raise self.SensorSetupError
         
+    def _not_internal(self, measurement: dict) -> bool:
+        measurement_attributes = measurement.attrib
+        if 'Internal' in measurement_attributes.keys():
+            if measurement_attributes['Internal']=='1':
+                return False
+        elif 'InternalUnit' in measurement_attributes.keys():
+            return False
+        else:
+            return True
+        
     
     def _initialize_sensor(self, sensor_channel):
         # initialize attributes associated with the channel
@@ -439,8 +449,8 @@ class PASCOBLEDevice():
 
         # get name of sensor (e.g. "ControlNodeAcceleration")
         sensor_channel['name'] = sensor_data.get('Tag')
-        # get names of measurements provided by sensor (e.g. "RawX, Accelerationy")
-        sensor_channel['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement[@Visible='1']")]
+        # put names of non-internal measurements provided by sensor (e.g. "RawX, Accelerationy") into the sensor channel
+        sensor_channel['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement") if self._not_internal(m)]
         # get factory calibration IDs
         sensor_channel['factory_cal_ids'] = [m.get('ID') for m in sensor_data.findall("./Measurement[@Type='FactoryCal']")]
 
