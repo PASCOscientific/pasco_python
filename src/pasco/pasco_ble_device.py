@@ -41,8 +41,6 @@ class PASCOBLEDevice():
 
     WIRELESS_RMS_START = [0X37, 0X01, 0X00]
 
-    TIME_DELAY = 1.0                       # Time to wait after sending a read command
-
     def __init__(self):
         """
         Create a PASCO BLE Device object
@@ -56,7 +54,7 @@ class PASCOBLEDevice():
         self._airlink_sensor_id = None
         self._type = "BLE"
         self._loop = asyncio.new_event_loop()
-        self._queue = asyncio.Queue()   # this is used to synchronize with the callback
+        self._queue = asyncio.Queue()       # this is used to synchronize with the callback
         self._data_ack_counter = {}
 
         # sensor and measurement data
@@ -79,10 +77,6 @@ class PASCOBLEDevice():
                                             # this causes problems with multiple of the same sensor
         self._measurement_sensor_ids = {}   # {measurement name: sensor channel at which measurement can be requested}
                                             # This causes problems with multiple of the same sensor
-
-        # connection sequence commands for control Node
-        GCMD_CONTROL_NODE_CMD = 0x37
-        CTRLNODE_CMD_DETECT_DEVICES = 2         # Detects which devices are attached
 
         # Load Datasheet
         # it is saved as a string literal variable in datasheets.py
@@ -188,6 +182,13 @@ class PASCOBLEDevice():
 
 
     async def _async_scan(self, pasco_device_names):
+        """
+        INTERNAL
+        Scans for BLE devices and returns a list of pasco devices available to connect to
+        Args:
+            pasco_device_names (list[str]): list of pasco devices to scan for
+
+        """
         found_devices = []
         
         bleak_devices = await BleakScanner.discover() #returns array of all devices found via bluetooth scan
@@ -227,7 +228,7 @@ class PASCOBLEDevice():
         Connect to a bluetooth device
 
         Args:
-            ble_device (BLEDevice): Device object discovered up when doing scan
+            ble_device (BLEDevice): BLE device to connect to (discovered during scan)
         """
     
         if ble_device is None:
@@ -303,9 +304,6 @@ class PASCOBLEDevice():
 
 
     def disconnect(self):
-
-
-
         """
         Disconnect from the device
         """
@@ -340,12 +338,11 @@ class PASCOBLEDevice():
         uuid = "4a5c000" + str(service_id) + "-000" + str(characteristic_id) + "-0000-0000-5c1e741f1c00"
         return UUID(uuid)
     
+
     def scan_controlnode_plugins(self):
         """
-        Detect the devices that are attached
-
-        Args:
-
+        Detect the devices that are attached to the control node.
+        This will trigger a cascading update of available control node sensors
         """
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
@@ -355,7 +352,9 @@ class PASCOBLEDevice():
 
 
     def initialize_device(self):
-        # gather data on each interface channel
+        """
+        Parse datasheets.py to get the data on all channels (characteristics) on the interface
+        """
         try:
             interface = self._xml_root.find("./Interfaces/Interface[@ID='%s']" % self._interface_id)
 
@@ -375,20 +374,17 @@ class PASCOBLEDevice():
                 for c in interface.findall("./Channel")
             ]
 
-            # get a list of external sensors by sensor ID
-            # look up those IDs in the xml file and append their data to self._setup_sensors\
-            # sensors is a list of sensor ID's connected to the controlNode ports
+            # If it is possible to plug a sensor into the device, then check if there is one plugged in
             if any([device['plug_detect'] == 1 for device in self._device_channels]):
                 self.scan_controlnode_plugins()
 
-            # We need to add the external sensors from the control Node to self._setup_sensors
-            # before we get_sensor_datasheet_info
             else:
                 self.initialize_device_sensors()
         
         except:
             raise self.SensorSetupError
         
+
     def initialize_device_sensors(self, plugin_sensor_ids = None):
         try:
             # FOR DEVICES WITH PLUGIN SENSORS (e.g. controlnode)
@@ -396,7 +392,7 @@ class PASCOBLEDevice():
             # device channel's sensor_id to the ID returned for that channel in the callback.
             # if no sensor ID is returned for that channel in the callback, then set sensor_id to ''
             # Here I am assuming that the IDs in the callback are returned in sequential order of their channels
-            # (they are for the controlnode)
+            # (they are for the control node)
             if plugin_sensor_ids != None:
                 i = 0
                 for channel in self._device_channels:
@@ -406,28 +402,26 @@ class PASCOBLEDevice():
 
             # Iterate over channels on the interface
             for channel in self._device_channels:
-                # print(f"channel {channel['id']}")
-
-                # if the interface channel is for a sensor
+                # if the interface channel is for a sensor then initialize it
                 if channel['type'] == 'Pasport' and channel['sensor_id'] != 0:
-                    # if you have two of the same sensor connected (i.e. two high-speed steppers)
-                    # then just copy the data rather than reading the xml twice (which is impossible)
-
                     self._initialize_sensor(channel)
    
 
             # Initialize device measurement values
-            # If the device channel has measurements (i.e. is a sensor channel) then associate it with its channel ID
+            # If the device channel has measurements (i.e. is a sensor channel) then associate that measurement with its channel ID
             self._measurement_sensor_ids = { measurement: channel['id'] for channel in self._device_channels for measurement in channel['measurements'] }
             self._data_results = { m: None for sensor in self._device_channels for m in sensor['measurements'] }
             self._sensor_names = {sensor['name'] : sensor for sensor in self._device_channels}
-            # [print(channel) for channel in self._device_channels]
-
 
         except:
             raise self.SensorSetupError
         
     def _not_internal(self, measurement: dict) -> bool:
+        """
+        Check if a measurement is internal so that we don't display it to the user
+        Args:
+            measurement (dict): the measurement data from datasheets.py
+        """
         measurement_attributes = measurement.attrib
         if 'Internal' in measurement_attributes.keys():
             if measurement_attributes['Internal']=='1':
@@ -438,10 +432,20 @@ class PASCOBLEDevice():
             return True
         
     def _not_derivative(self, measurement:dict) -> bool:
+        """
+        Check if a measurement is a derivative so we don't show it to the user
+        Args: 
+            measurement (dict): the measurement data from datasheets.py
+        """
         return measurement.get("Type") != "Derivative"
     
     
     def _initialize_sensor(self, sensor_channel):
+        """
+        Parse the datasheet to initialize a sensor with its measurements and their attributes
+        Args:
+            sensor_channel (dict): the sensor channel we are filling in data for
+        """
         # initialize attributes associated with the channel
         self._data_ack_counter[sensor_channel['id']] = 0
         self._data_stack[sensor_channel['id']] = []
@@ -492,7 +496,7 @@ class PASCOBLEDevice():
         self._sensor_data[sensor_channel['id']] = { m_id: m['Value'] for m_id, m in self._device_measurements[sensor_channel['id']].items() }
        
         # TODO: Factory Calibration check
-        #self.read_factory_cal(sensor['id'])
+        # self.read_factory_cal(sensor_channel['id'])
         return
 
 
@@ -596,6 +600,12 @@ class PASCOBLEDevice():
 
 
     async def write(self, service_id, command):
+        """
+        Write to the device
+        Args:
+            service_id (int): characteristic we are writing to
+            command (bytes): the command to send
+        """
         #data_to_write = bytes(command).hex()
         #ble_write_data = f'WRITE# {data_to_write} to {uuid}'
         #print(ble_write_data)
@@ -668,12 +678,12 @@ class PASCOBLEDevice():
 
 
     def update_controlnode_plugin_sensor(self, data):
+        """
+        Parse data about the plugin sensors in response to a plugin sensor update callback
+        from the control node. 
+        """
         # using the struct module, unpack the data via a little-endian encoding
         # see https://docs.python.org/3/library/struct.html
-        # In a helper function:
-        # decode sensor IDs
-        # look up these IDs in data sheet
-        # add to sensor data variables
         sensor_ids = struct.unpack('<xhhh', data)
         self.initialize_device_sensors(sensor_ids)
         pass
@@ -722,6 +732,11 @@ class PASCOBLEDevice():
 
 
     async def _notify_callback(self, bleakGATTChar: BleakGATTCharacteristic, data: bytearray):
+        """
+        Handle all callbacks from the device. The link between the characteristics who send callbacks
+        and this function was made by start_notify() in _async_connect()
+        
+        """
         handle = bleakGATTChar.handle
         # check that we're getting a valid callback, not just a battery status update
         if data[0] in [0xC0, 0x82]:
@@ -746,6 +761,10 @@ class PASCOBLEDevice():
 
 
     async def write_await_callback(self, service_id, one_shot_cmd):
+        """
+        This function bundles writing and listening for a callback into a TaskGroup
+        forcing execution to stop until it receives the callback, synchronizing communication.
+        """
         # sends a write command requesting data and listens until it gets the callback notification
         async with asyncio.TaskGroup() as tg:
             write = tg.create_task(self.write(service_id, one_shot_cmd))
@@ -754,7 +773,6 @@ class PASCOBLEDevice():
      
 
 # ---------- Reading data --------
-
 
     def read_data(self, measurement):
         """
@@ -786,7 +804,7 @@ class PASCOBLEDevice():
         Read multiple sensor measurements
 
         Args:
-            measurement (List(string)): List of measurements that we want to read
+            measurement (list[string]): List of measurements that we want to read
         """
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
@@ -846,7 +864,7 @@ class PASCOBLEDevice():
         Return default units for multiple measurements
 
         Args:
-            measurements (List(string)): List of measurements that we want the units for
+            measurements (list[string]): List of measurements that we want the units for
         """
 
         if self.is_connected() is False:
@@ -1177,8 +1195,7 @@ class PASCOBLEDevice():
 
             # organize the equation by parentheses. 
             paranthetic_vals = list(self.parenthetic_contents(raw_equation))
-            
-            # this evaluates the equation in order of parentheses
+
             for i, eqn in paranthetic_vals:
                 if (eqn.startswith('limit')):
                     limit_eqn = eqn.replace('limit(','')
