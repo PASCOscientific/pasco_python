@@ -8,9 +8,20 @@ This PASCO Python library allows users to connect to PASCO Wireless sensors usin
 
 For project examples, view our [pasco_python_examples repository](https://github.com/PASCOscientific/pasco_python_examples).
 
+# Contents:
+- [Getting Started](#how-do-i-get-started)
+- [Compatible Sensors](#compatible-sensors)
+- [Connecting to a Sensor](#step-1-create-an-object-for-the-device)
+- [Collecting Data](#lets-put-it-all-together)
+- [//code.Node](#codenode)
+- [//control.Node](#controlnode)
+- [Troubleshooting](#troubleshooting)
+
 # How do I get started?
 
-To install the package into your Python environment, type this into your Terminal
+First, make sure you are working with Python 3.11 (see [Troubleshooting](#troubleshooting) for Python version help)
+
+To install the PASCO package into your Python environment, type this into your Terminal
 
 ```
 pip install pasco
@@ -113,7 +124,9 @@ PASCO's Bluetooth sensors will turn off after 5 minutes of no activity. To keep 
 
 ## Step 1: Create an object for the device
 
-`my_sensor = PASCOBLEDevice()`
+```
+my_sensor = PASCOBLEDevice()
+```
 
 If you know the device's 6-digit serial ID (printed on the device) you can quickly scan and connect using the command:
 `my_sensor.connect_by_id('111-123')`
@@ -122,7 +135,7 @@ Otherwise perform Steps 2 & 3 to scan/connect.
 
 ## Step 2: Scan for available bluetooth (BLE) sensors
 
-`my_sensor.scan()` Returns list of BLE devices found in the scan.` `my_sensor.scan('Temperature')` Returns a list of Temperature sensors found
+`my_sensor.scan()` Returns list of BLE devices found in the scan. `my_sensor.scan('Temperature')` Returns a list of Temperature sensors found
 
 How to use:
 
@@ -137,33 +150,40 @@ The scan command will return a list of found devices. Iterate through that list 
 One way is to print the list and prompt the user like this:
 
 ```
+if found_devices:
+    print('\nDevices Found')
+    for i, ble_device in enumerate(found_devices):
+        print(f'{i}: {ble_device.name}')
 
-for i, ble_device in enumerate(found_devices):
-    print(f'{i}: {ble_device.name}')
-
-selected_device = input('Select a device: ')
-my_sensor.connect(found_devices[int(selected_device)])
-
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    code_node_device.connect(found_devices[int(selected_device)])
+else:
+    print("No Devices Found")
+    exit(1)
 ```
 
 ### Example of how to scan/connect
 
 ```
+from src.pasco.pasco_ble_device import PASCOBLEDevice
 
 my_sensor = PASCOBLEDevice()
 found_devices = my_sensor.scan()
 
-print('\nDevices Found')
-for i, ble_device in enumerate(found_devices):
-    display_name = ble_device.name.split('>')
-    print(f'{i}: {display_name[0]}')
+if found_devices:
+    print('\nDevices Found')
+    for i, ble_device in enumerate(found_devices):
+        print(f'{i}: {ble_device.name}')
 
-# Auto connect if only one sensor found
-selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-ble_device = found_devices[int(selected_device)]
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    code_node_device.connect(found_devices[int(selected_device)])
+else:
+    print("No Devices Found")
+    exit(1)
 
 my_sensor.connect(ble_device)
-
+print(f"measurements: {my_sensor.get_measurement_list()}")
+my_sensor.disconnect()
 ```
 
 ## Step 4: View Device Sensor(s)
@@ -195,16 +215,67 @@ To get the units for a single measurement
 To get the units for a list of measurements
 `my_weather_sensor.get_measurement_unit_list(['Temperature','RelativeHumidity'])`
 
+# Let's put it all together
+
+##  Example: One shot read
+
+```
+from src.pasco.pasco_ble_device import PASCOBLEDevice
+
+
+temp_sensor = PASCOBLEDevice()
+temp_sensor.connect_by_id('055-808') # replace with your sensor's 6-digit id
+
+temp_value = temp_sensor.read_data('Temperature')
+temp_units = temp_sensor.get_measurement_unit('Temperature')
+print(f'{temp_value} {temp_units}')
+
+temp_sensor.disconnect()
+```
+
+## Example: Scan/select a sensor and read data
+
+Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement. We do not need to specify a device type. We will continuously read and display the result.
+
+```
+from src.pasco.pasco_ble_device import PASCOBLEDevice
+
+
+my_sensor = PASCOBLEDevice()
+found_devices = my_sensor.scan()
+
+if found_devices:
+    print('\nDevices Found')   
+    for i, ble_device in enumerate(found_devices):
+        print(f'{i}: {ble_device.name}')
+
+    selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+    code_node_device.connect(found_devices[int(selected_device)])
+else:
+    print("No Devices Found")
+    exit(1)
+
+# Auto connect if only one sensor found
+selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
+
+ble_device = found_devices[int(selected_device)]
+my_sensor.connect(ble_device)
+
+# Loop that will read/display the data 100 times
+for i in range(100):
+    current_temp = my_sensor.read_data('Temperature')
+    print(f'The current temp is {current_temp}')
+
+my_sensor.disconnect()
+```
 ---
 
-## /\/code.Node Specific Commands
+# /\/code.Node
 
 In order to connect to a /\/code.Node we must import the `CodeNodeDevice` object and (optionally) the character library which allows a user to display icons on the 5x5 LED Array.
 
 ```
-
 from src.pasco.code_node_device import CodeNodeDevice, Icons
-
 ```
 
 `my_code_node = CodeNodeDevice()` Create /\/code.Node Bluetooth device object  
@@ -219,7 +290,6 @@ from src.pasco.code_node_device import CodeNodeDevice, Icons
 ### Set LEDs on the 5x5 Display
 
 ```
-
 x, y coordinates on the //code.Node 5x5 LED display
 ---------------------------
 | 0,0  1,0  2,0  3,0  4,0 |
@@ -230,7 +300,6 @@ x, y coordinates on the //code.Node 5x5 LED display
 ---------------------------
 
 intensity range is 0-255
-
 ```
 
 ### Set one LED
@@ -270,17 +339,11 @@ code_node_device.set_rgb_led(r, g, b)
 Send `frequency` (int) in Hz
 
 ```
-
 code_node_device.set_sound_frequency(440)
-
 ```
-
 Turn the speaker off
-
 ```
-
 code_node_device.set_sound_frequency(0)
-
 ```
 
 ### Scroll Text on the 5x5 LED Array
@@ -289,9 +352,7 @@ code_node_device.set_sound_frequency(0)
 This will scroll the text on the /\/code.Node's display
 
 ```
-
 code_node_device.scroll_text_in_array('HELLO WORLD')
-
 ```
 
 ### The character library
@@ -300,10 +361,8 @@ code_node_device.scroll_text_in_array('HELLO WORLD')
 If we import the `Icons` class from the `character_library` to our project we can show unique images on the 5x5 LED Array. Refer to the library file to see available options. Examples:
 
 ```
-
 code_node_device.show_image_in_array(Icons().smile)
 code_node_device.show_image_in_array(Icons().heart)
-
 ```
 
 ### Reset the code_node outputs
@@ -311,73 +370,9 @@ code_node_device.show_image_in_array(Icons().heart)
 `code_node_device.reset()`
 Turn the 5x5 LED display, RGB LED and speaker off.
 
-# Let's put it all together
-
-## Example 1A: One shot read
-
-Connect to a Wireless Temperature Sensor and get one reading:
-
-```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
 
 
-temp_sensor = PASCOBLEDevice()
-temp_sensor.connect_by_id('055-808')
-
-temp_value = temp_sensor.read_data('Temperature')
-print(temp_value)
-
-temp_sensor.disconnect()
-```
-
-## Example 1B: One shot read and display units
-
-```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
-
-
-temp_sensor = PASCOBLEDevice()
-temp_sensor.connect_by_id('055-808')
-
-temp_value = temp_sensor.read_data('Temperature')
-temp_units = temp_sensor.get_measurement_unit('Temperature')
-print(f'{temp_value} {temp_units}')
-
-temp_sensor.disconnect()
-
-```
-
-## Example 2: Scan/select a sensor and read data
-
-Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement. We do not need to specify a device type. We will continuously read and display the result.
-
-```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
-
-
-my_sensor = PASCOBLEDevice()
-found_devices = my_sensor.scan()
-
-print('\nDevices Found')
-for i, ble_device in enumerate(found_devices):
-    display_name = ble_device.name.split('>')
-    print(f'{i}: {display_name[0]}')
-
-# Auto connect if only one sensor found
-selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-
-ble_device = found_devices[int(selected_device)]
-my_sensor.connect(ble_device)
-
-# Loop that will read/display the data 100 times
-for i in range(100):
-    current_temp = my_sensor.read_data('Temperature')
-    print(f'The current temp is {current_temp}')
-
-my_sensor.disconnect()
-```
-
-## Example 3: Working with the /\/code.Node
+## Example: Working with the /\/code.Node
 
 Below is a simple example that shows how to connect to a /\/code.Node, read a measurement and control an output.
 
@@ -386,7 +381,7 @@ from src.pasco.code_node_device import CodeNodeDevice
 
 
 code_node = CodeNodeDevice()
-code_node.connect_by_id('481-782')
+code_node.connect_by_id('481-782') # replace with your device's 6-digit id
 
 while code_node.read_data('Button1') == 0:
     if code_node.read_data('Brightness') < 2:
@@ -399,7 +394,7 @@ code_node.scroll_text_in_array('Goodbye')
 code_node.reset()
 ```
 
-## Example 4: Connect to multiple sensors
+## Example: Connect to multiple sensors
 
 We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
 
@@ -453,22 +448,62 @@ for i in range (1000):
 code_node_device.disconnect()
 force_accel_device.disconnect()
 ```
-## Working with the /\/control.Node
-The control node has an internal speaker and x,y,z acceleration sensor. But what makes the control node unique is that it can also connect to external sensors such as a rangefinder and stepper sensors. Any sensor plugged into the control node is automatically accessible just like a built-in sensor. 
+---
+# /\/control.Node
+The control node has an internal speaker and x,y,z acceleration sensor. But what makes the control node unique is that it can also connect to external devices such as a rangefinder, steppers, and servos. Any sensor plugged into the control node is automatically accessible just like a built-in sensor.
+
+The control.Node has commands for setting steppers, servos, and the power output board as well as sensing from steppers, servos, and plugin sensors. 
+
+
 
 If you know the 6-digit code of your control node device, you can just connect:
 
     from src.pasco.control_node_device import ControlNodeDevice
+    import time
 
     controlNode = ControlNodeDevice()
-    controlNode.connect_by_id('664-591')
+    controlNode.connect_by_id('664-591') # replace with your device's 6-digit id
 
-The control node can control steppers, servos, and a power output board. For example
+Now put the \/\/control.Node into the pascobot. Plug in the steppers into ports A and B on the \/\/control.Node, and run the following code. 
 
+    from src.pasco.control_node_device import ControlNodeDevice
+    import time
+
+    controlNode = ControlNodeDevice()
+    controlNode.connect_by_id('664-591') # replace with your device's 6-digit id
+    
     controlNode.rotate_steppers_continuously(360, 360, 360, 360)
     time.sleep(1)
     controlNode.stop_steppers(360, 360)
-    controlNode.read_data('Angle', 'A')
+    print(controlNode.read_data('Angle', 'A'))
+    controlNode.disconnect()
 
-accelerates both steppers to 360 deg/s at an acceleration of 360 deg/s/s, waits a second, stops them at an acceleration of 360 deg/s/s, and reads the angle of stepper A.
+This accelerates both steppers to 360 deg/s at an acceleration of 360 deg/s/s, waits a second, stops them at an acceleration of 360 deg/s/s, and reads the angle of stepper A.
 More examples of steppers, servos, plugin sensors, and the power output board are in `controlnode_examples.py` and `grabberbot.py`.
+
+---
+# Troubleshooting
+
+### 1. Are you working with Python 3.11?
+To check your version type in your terminal
+```
+python --version
+```
+If that doesn't work try 
+```
+python3 --version
+```
+If that doesn't work you don't have python installed. Go to https://www.python.org/ and install.
+
+If you have an older version of python installed, uninstall it and reinstall 3.11. 
+After you reinstall Python you will also need to reinstall the pasco package. 
+### 2. Is pasco installed?
+If you get an error like `no module named "<module name>"` try
+```
+pip install pasco
+``````
+
+### 3. Is the device on?
+Check if the red light is blinking. If so you're good to go.
+### 4. Is the device already connected?
+Check if the light is green. If so, hold down the power button to turn the device off, and press it to turn the device on again. When the light blinks red you're good.

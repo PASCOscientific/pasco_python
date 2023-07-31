@@ -1,3 +1,9 @@
+# Documentation
+### A more detailed description of how pasco python works
+# Contents:
+- [Background](#motivation)
+- [`pasco_ble_device` under the hood](#pasco_ble_devicepy)
+- [`control_node_device` under the hood](#control_node_devicepy)
 # Motivation:
 The goal of this python API is to connect a pasco device such as the control node to a python program. To do this we use bleak, a Bluetooth Low Energy (BLE) python library. Because communicating over bluetooth involves a time delay this involves using the asyncio library to handle asynchronous tasks such as reading and writing over bluetooth.
 For more on these tools check out these links:
@@ -50,7 +56,7 @@ Another key part of `pasco_ble_device.py` is how it represents the device intern
 
 When a pasco device connects it tells the computer its interface id, which is then looked up in `datasheets.py` This datasheet tells the computer what communication channels are available on the device, including sensors, outputs (like speakers), and plugin locations (such as the ports on the control node). This initializing is handled by `initialize_device()`. 
 
-`initialize_device()` uses `datasheets.xml` to first get data about the interface channels, then pass this to `initialize_device_sensors()`. This calls `_initialize_sensor()` on each sensor in turn to get data on the sensor and the measurements it provides. Finally the sensor and measurement lists are saved in several instance attributes.
+`initialize_device()` uses `datasheets.py` to first get data about the interface channels, then pass this to `initialize_device_sensors()`. This calls `_initialize_sensor()` on each sensor in turn to get data on the sensor and the measurements it provides. Finally the sensor and measurement lists are saved in several instance attributes.
 
 ### Plugin Sensors
 Working with the control node's plugin sensors requires some special handling provided by several functions with `controlnode_plugins` in the name. 
@@ -64,7 +70,9 @@ This file handles functionality specific to the control node. It inherits from `
 ### Reading Data
 An important feature of the control node is the ability to plug in sensors, such as a range finder and two high speed steppers on the pasco bot. Unfortunately the internal representation of sensors and measurements in `pasco_ble_device.py` does not support a distinction between two of the same sensors plugged into two different ports. Because this is a control node specific issue we put the solution in `control_node_device.py`. 
 
-In `ControlNodeDevice.read_data()` there is an optional parameter of port, allowing you to designate which port you want to read data from.  Consider `read_data(measurement='Angle', port='A')` sent to a pasco bot. The `Angle` measurement is available from the steppers in both ports `A` and `B`, so `read_data` uses the `port` parameter to designate which stepper from which to read the angle. Then when the callback comes for the `Angle` reading, we extract the measurement from the `_sensor_data` instance variable. A similar process is used to read the servo current.
+In `ControlNodeDevice.read_data()` there is an optional parameter of port, allowing you to designate which port you want to read data from.  Consider `read_data(measurement='Angle', port='A')` sent to a pasco bot. The `Angle` measurement is available from the steppers in both ports `A` and `B`, so `read_data` uses the `port` parameter to designate which stepper from which to read the angle. Then when the callback comes for the `Angle` reading, we extract the measurement from the `_sensor_data` instance variable.
+
+To read data from servos we also use the port parameter, but the data is unpacked and result calculated manually. 
 
 ### Steppers
 There are three different types of commands sent to steppers:
