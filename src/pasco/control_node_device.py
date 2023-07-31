@@ -1,10 +1,10 @@
 from .pasco_ble_device import PASCOBLEDevice
 import time
-from struct import unpack
+from struct import unpack, pack
+from math import pi
 
 
 class ControlNodeDevice(PASCOBLEDevice):
-    #TODO: make a context manager that handles connecting and disconnecting from the codeNode
 
     # Control Node commands
     CTRLNODE_CMD_SET_SERVO = 3              # Enables PWM to servo
@@ -25,7 +25,7 @@ class ControlNodeDevice(PASCOBLEDevice):
     CN_ACC_ID_NONE = 0
     CN_ACC_ID_MOTOR_BASE = 2500
     CN_ACC_ID_STEPPER_480 = 2501
-    CN_ACC_ID_STEPPER_4800 = 2502
+    CN_ACC_ID_LOW_SPEED_STEPPER= 2502
     CN_ACC_ID_MOTOR_3 = 2503
     CN_ACC_ID_LINE_FOLLOWER = 2504
     CN_ACC_ID_RANGE_SENSOR = 2505
@@ -59,14 +59,17 @@ class ControlNodeDevice(PASCOBLEDevice):
                 
             elif type(port) == str:
                 # If the port is A or B, then we are sensing two steppers. 
-                # Interpret the plugin channel to query the correct sensor, and read data as usual
+                # Interpret the plugin channel to query the correct sensor, and convert from radians to degrees.
                 sensor_id = self.PLUGIN_CHANNELS[port]
                 self._get_sensor_measurements(sensor_id)
                 measurement_id = None
                 for m_id, m in self._device_measurements[sensor_id].items():
                     if m['NameTag'] == measurement:
                         measurement_id = m_id
-                return self._sensor_data[sensor_id][measurement_id]
+                measure = self._sensor_data[sensor_id][measurement_id]
+                if measurement in ["Angle", "AngularVelocity"]:
+                    measure = round(measure * 180/pi, 1)
+                return measure
             
             if type(port) == int:
                 # If we're getting a response for a servo resistance, query the onboard sensor
@@ -82,8 +85,9 @@ class ControlNodeDevice(PASCOBLEDevice):
 
 # ----------- Steppers --------------
 
-    def get_stepper_remaining(self):
+    def _get_stepper_remaining(self):
         """
+        INTERNAL
         Get info on the steppers for rotate_steppers_through command
         returns degree_info (list[float]): list of information about remaining tasks for stepper.
 
@@ -117,19 +121,20 @@ class ControlNodeDevice(PASCOBLEDevice):
         """
         raw_stepper_info = list(unpack('<hhhhbb', self._data_packet))
         # add in the extra bits for steps remaining
-        raw_stepper_info[0] += raw_stepper_info[4] << 16
-        raw_stepper_info[1] += raw_stepper_info[5] << 16
+        raw_stepper_info[0] += raw_stepper_info[4] << 8
+        raw_stepper_info[1] += raw_stepper_info[5] << 8
         raw_stepper_info = raw_stepper_info[0:4]
         degree_info = [data/self.STEPS_PER_REV * self.DEGREES_PER_REV for data in raw_stepper_info]
-
+        print(degree_info)
         return degree_info
 
     def _send_stepper_command(self, speedA, accelerationA, distanceA, speedB, accelerationB, distanceB):
         """
-        Arguments:
-        speed: degrees/second
-        acceleration: degrees/second/second
-        distance: degrees or 'continous'
+        INTERNAL
+        Args:
+            speed: degrees/second
+            acceleration: degrees/second/second
+            distance: degrees or 'continous'
 
         If distance == 'continous' then the steppers rotate continuously
         To send a command to only one stepper, set the other stepper's parameters to None.
@@ -153,11 +158,12 @@ class ControlNodeDevice(PASCOBLEDevice):
         # deal with rotating stepper continuously
         continous1 = distanceA == 'continuous'
         continous2 = distanceB == 'continuous'
-
+        
+        # this scales up the command to account for the low speed stepper's gearing
         mul = {}
         for sensor in self._device_channels:
             if 'channel_id_tag' in sensor:
-                mul[sensor['id']] = 10 if sensor['sensor_id'] == self.CN_ACC_ID_STEPPER_4800 else 1
+                mul[sensor['id']] = 6 if sensor['sensor_id'] == self.CN_ACC_ID_LOW_SPEED_STEPPER else 1
 
         # Convert speeds from deg/s[/s] to decisteps/s[/s] and distances from deg to steps
         
@@ -205,7 +211,12 @@ class ControlNodeDevice(PASCOBLEDevice):
 
     def rotate_steppers_continuously(self, speedA, accelerationA, speedB, accelerationB):
         """
-        rotate steppers continuously at given accelerations to given speeds
+        rotate steppers continuously at given accelerations to given velocities
+        Args:
+            speedA (float):        target velocity for stepper plugged into port A
+            accelerationA (float): acceleration to reach target velocity for stepper A
+            speedB (float):        target velocity for stepper plugged into port B
+            accelerationA (float): acceleration to reach target velocity for stepper B
 
         """
         if not self.is_connected():
@@ -218,6 +229,10 @@ class ControlNodeDevice(PASCOBLEDevice):
     def rotate_stepper_continuously(self, port, speed, acceleration):
         """
         Rotate a single stepper continously
+        Args:
+            port (str): port of stepper
+            speed (double): target velocity for stepper
+            acceleration (double): acceleration to reach target velocity
         """
         if port.upper() == "A":
             self.rotate_steppers_continuously(speed, acceleration, None, None)
@@ -242,6 +257,10 @@ class ControlNodeDevice(PASCOBLEDevice):
     def stop_stepper(self, port, acceleration):
         """
         Stop the stepper in the given port with given acceleration
+
+        Args:
+            port (str): port of stepper
+            acceleration (float): acceleration to stop at
         """
         if port.upper() == "A":
             self.stop_steppers(acceleration, None)
@@ -254,15 +273,16 @@ class ControlNodeDevice(PASCOBLEDevice):
 
     def rotate_steppers_through(self, speedA, accelerationA, distanceA, speedB, accelerationB, distanceB, await_completion=False):
         """
-        Set the Control Node stepper motors
+        Rotate the steppers through the given distances
 
         Args:
-            speed1 (float): deg/s
-            accel1 (float): deg/s/s
-            distance1 (float): degrees
-            speed2 (float): deg/s
-            accel2 (float): deg/s/s
-            distance2 (float): degrees
+            speedA (float):          target velocity for stepper plugged into port A (deg/s)
+            accelerationA (float):   acceleration to reach target velocity for stepper A (deg/s/s)
+            distanceA (float):       distance to run stepper A (deg)
+            speedB (float):          target velocity for stepper plugged into port B (deg/s)
+            accelerationB (float):   acceleration to reach target velocity for stepper B (deg/s/s)
+            distanceB (float):       distance to run stepper B (deg)
+            await_completion (bool): whether to stop execution to wait for the stepper to finish rotating
 
         """
         if self.is_connected() is False:
@@ -273,15 +293,21 @@ class ControlNodeDevice(PASCOBLEDevice):
         )
 
         if await_completion:
-            degrees_remaining = self.get_stepper_remaining()
+            degrees_remaining = self._get_stepper_remaining()
             while degrees_remaining[0] > 0 or degrees_remaining[1] > 0:
-                degrees_remaining = self.get_stepper_remaining()
+                degrees_remaining = self._get_stepper_remaining()
         
 
 
     def rotate_stepper_through(self, port, speed, acceleration, distance, await_completion=False):
         """
         Rotate a single stepper through the given distance
+        Args:
+            port (str):              port stepper is plugged into
+            speed (float):           target velocity for stepper plugged into port (deg/s)
+            acceleration (float):    acceleration to reach target velocity for stepper (deg/s/s)
+            distance (float):        distance to run stepper (deg)
+            await_completion (bool): whether to stop execution to wait for the stepper to finish rotating
         """
         if port.upper() == "A":
             self.rotate_steppers_through(speed, acceleration, distance, None, None, None, await_completion)
@@ -290,14 +316,15 @@ class ControlNodeDevice(PASCOBLEDevice):
         else:
             raise self.InvalidParameter()
 
-#TODO: write code for low speed steppers
-# in Blockly the measurements for stepper movement don't correspond for the 
-# low speed stepper. It seems it is sending the same command as for the high speed stepper
 
 # -------------- Servos ----------------
 
     def _calculate_on_time(self, measure_type, value):
         """
+        INTERNAL
+        Args:
+            measure_type (str): type of servo measure. "standard" or "continuous"
+            value (float):      value of measure to set servos to
         Calculate the on-time of the PWM command.
         Servos are controlled by Pulse Width Manipulation: commands are sent via 20 ms
         pulses, where the width of the pulse corresponds to the value of the command.
@@ -320,8 +347,8 @@ class ControlNodeDevice(PASCOBLEDevice):
         Args:
             ch_1_type (str): "standard" or "continuous" servo type
             ch_1_value (float): value of either degrees or percent speed
-            ch_2_type [same]
-            ch_2_value [same]
+            ch_2_type (str): "standard" or "continuous" servo type
+            ch_2_value (float): value of either degrees or percent speed
         """
         if not self.is_connected:
             raise self.DeviceNotConnected()
@@ -417,7 +444,7 @@ class ControlNodeDevice(PASCOBLEDevice):
         # A CH2 -> 1100     -> 12
         # B CH1 -> 110000   -> 48
         # B CH2 -> 11000000 -> 192
-        # each one is 4 times the last one
+
         encode_which_pins = {
             ('A', 1): 3,
             ('A', 2): 12,
@@ -484,7 +511,7 @@ class ControlNodeDevice(PASCOBLEDevice):
 
     def reset(self):
         """
-        Reset the speaker and LEDs on the code node
+        Reset the speaker and LEDs on the control node
         """
         
         if self.is_connected() is False:

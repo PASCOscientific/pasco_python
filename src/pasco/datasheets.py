@@ -2002,7 +2002,7 @@ datasheet = '''<!DOCTYPE Datasheets>
         <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="rev" Type="RotaryPos" Inputs="0" Params="6.28319,960" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-6.28" TypicalMax="6.28" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
         <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="revps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-6.28" TypicalMax="6.28" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
         <Measurement ID="3" NameTag="Position" UnitType="m" Equation="[1]*0.0371" Accuracy="0.001" Maximum="1" MeasType="Position" Minimum="-1" Precision="4" ShortNameTag="pos" SymbolTag="x" Visible="1"/>
-        <Measurement ID="4" NameTag="Velocity" UnitType="mps" Equation="[2]*0.0371" Accuracy="0.001" Maximum="0.5" MeasType="Velocity" Minimum="-0.5" Precision="3" ShortNameTag="vel" SymbolTag="velocity" Visible="1"/>
+        <Measurement ID="4" NameTag="Velocity" UnitType="mps" Type="Derivative" Equation="[2]*0.0371" Accuracy="0.001" Maximum="0.5" MeasType="Velocity" Minimum="-0.5" Precision="3" ShortNameTag="vel" SymbolTag="velocity" Visible="1"/>
       </Sensor>
       <Sensor ID="2502" Tag="LowSpeedStepper" DefaultRate="20Hz" IconID="2501" MaxRate="50Hz" Model="PS-2978" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
         <Measurement ID="0" NameTag="RawCountChange" Type="RawDigital" DataSize="2" TwosComp="1" UnitType="Unitless" CanChangeSign="1" Internal="1"/>
@@ -2034,8 +2034,8 @@ datasheet = '''<!DOCTYPE Datasheets>
         <Measurement ID="1" NameTag="RawHumidity" UnitType="percent" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="2" NameTag="RawLight" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="3" NameTag="RawMoisture" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
-		<Measurement ID="4" NameTag="Temperature" UnitType="DegC" Equation="[0]*0.1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1" IsDefaultMeas="1"/>
-		<Measurement ID="5" NameTag="RelativeHumidity" UnitType="percent" Equation="[1]*0.1" Accuracy="0.5" Maximum="100" MeasType="RelativeHumidity" Minimum="0" TypicalMin="20" TypicalMax="90" Precision="1" ShortNameTag="RelHum" SymbolTag="RH" Visible="1"/>
+		    <Measurement ID="4" NameTag="Temperature" UnitType="DegC" Equation="[0]*0.1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1" IsDefaultMeas="1"/>
+		    <Measurement ID="5" NameTag="RelativeHumidity" UnitType="percent" Equation="[1]*0.1" Accuracy="0.5" Maximum="100" MeasType="RelativeHumidity" Minimum="0" TypicalMin="20" TypicalMax="90" Precision="1" ShortNameTag="RelHum" SymbolTag="RH" Visible="1"/>
         <Measurement ID="6" NameTag="Brightness" UnitType="percent" Equation="sqrt([2])*0.3906" MeasType="Brightness" Minimum="0" Maximum="100" TypicalMin="0" TypicalMax="20" Visible="1" ShortNameTag="brightness" SymbolTag="brns"/>
         <Measurement ID="7" NameTag="VWCLoam" UnitType="percent" Equation="table(([3]*60.8)+336.9,7122,45,14100,20,17245,15,51725,0)" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
         <Measurement ID="8" NameTag="VWCSand" UnitType="percent" Equation="table(([3]*60.8)+336.9,6344,35,11964,15,50689,0)" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>

@@ -437,6 +437,9 @@ class PASCOBLEDevice():
         else:
             return True
         
+    def _not_derivative(self, measurement:dict) -> bool:
+        return measurement.get("Type") != "Derivative"
+    
     
     def _initialize_sensor(self, sensor_channel):
         # initialize attributes associated with the channel
@@ -450,7 +453,7 @@ class PASCOBLEDevice():
         # get name of sensor (e.g. "ControlNodeAcceleration")
         sensor_channel['name'] = sensor_data.get('Tag')
         # put names of non-internal measurements provided by sensor (e.g. "RawX, Accelerationy") into the sensor channel
-        sensor_channel['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement") if self._not_internal(m)]
+        sensor_channel['measurements'] = [m.get('NameTag') for m in sensor_data.findall("./Measurement") if self._not_internal(m) and self._not_derivative(m)]
         # get factory calibration IDs
         sensor_channel['factory_cal_ids'] = [m.get('ID') for m in sensor_data.findall("./Measurement[@Type='FactoryCal']")]
 
@@ -1051,21 +1054,28 @@ class PASCOBLEDevice():
                 val = {raw_m['ID']: result_value}
                 self._sensor_data[sensor_id].update(val)
 
+            # This calculates every measurement available at the sensor, not just the measurement requested.
+            # Every time you ping a sensor it updates all measurements available from that sensor.
+            # It has to do this because many measurements are derived from others (i.e. VWCLoam derived from RawMoisture)
             for m_id, m in self._device_measurements[sensor_id].items():
                 if self._sensor_data[sensor_id][m_id] == None:
                     result_value = self._get_measurement_value(sensor_id, m_id)
                     if 'Precision' in m and result_value != None:
                         result_value = round(result_value, m['Precision'])
 
+                    if 'Limits' in m and result_value != None:
+                        limits = [int(lim) for lim in m['Limits'].split(',')]
+                        result_value = self._limit(result_value, limits[0], limits[1])
+
                     val = {m_id: result_value}
                     self._sensor_data[sensor_id].update(val)
 
             # Set visible data variables
             try:
-                for channel_id, measurements in self._device_measurements.items():
+                for sensor_id, measurements in self._device_measurements.items():
                     for m_id, m in measurements.items():
-                        if (m['Visible'] == 1 and self._sensor_data[channel_id][m_id] != None):
-                            result_val = { m['NameTag']: self._sensor_data[channel_id][m_id] }
+                        if (m['Visible'] == 1 and self._sensor_data[sensor_id][m_id] != None):
+                            result_val = { m['NameTag']: self._sensor_data[sensor_id][m_id] }
                             self._data_results.update(result_val)
             except:
                 raise self.SensorSetupError
@@ -1076,6 +1086,7 @@ class PASCOBLEDevice():
 
     def _get_measurement_value(self, sensor_id, measurement_id):
         m = self._device_measurements[sensor_id][measurement_id]
+
         result_value = None
 
         if m['Type'] == 'RawDigital' and self._sensor_data[sensor_id][measurement_id] == None:
@@ -1152,6 +1163,7 @@ class PASCOBLEDevice():
 
                 raw_equation = raw_equation.replace('^', '**')
 
+                # replace the reference to a value in the callback with its value
                 if self._sensor_data[sensor_id][eVarKey] != None:
                     replace_with = str(self._sensor_data[sensor_id][eVarKey])
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
@@ -1159,8 +1171,14 @@ class PASCOBLEDevice():
                     replace_with = str(self._get_measurement_value(sensor_id, eVarKey))
                     raw_equation = raw_equation.replace(bracket_val, replace_with)
 
-            paranthetic_vals = list(self.parenthetic_contents(raw_equation))
 
+            if raw_equation.startswith('table'):
+                return self._equation_eval_table(raw_equation)
+
+            # organize the equation by parentheses. 
+            paranthetic_vals = list(self.parenthetic_contents(raw_equation))
+            
+            # this evaluates the equation in order of parentheses
             for i, eqn in paranthetic_vals:
                 if (eqn.startswith('limit')):
                     limit_eqn = eqn.replace('limit(','')
@@ -1249,7 +1267,50 @@ class PASCOBLEDevice():
                     raise self.InvalidEquation("Error decoding the raw data")
 
         return result_value
+    
 
+    def _equation_eval_table(self, raw_equation: str) -> float:
+        """
+        args:
+            raw_equation (str): equation string to evaluate as a table using linear interpolation
+
+        Evaluates an equation string to return a measurement value
+        Many measurements on the datasheet have equations that involve tables.
+        These tables contain an x value at the beginning and a series of points to use for linear interpolation
+        This function steps in once the variable is determined. It evaluates x, does linear interpolation, and returns y
+        raw_equation looks like this: "table((880*60.8)+336.9,7122,45,14100,20,17245,15,51725,0)"
+        """
+        trimmed_equation = raw_equation[6:-1]
+        elements = trimmed_equation.split(',')
+        # grab just the expression pertaining to x and evaluate it
+        x = eval(elements.pop(0))
+        # now put the remaining values into a list as tuples of 2 (representing points)
+        elements = [float(e) for e in elements]
+        points = []
+        while(len(elements)>0):
+            points.append(tuple(elements[0:2]))
+            elements = elements[2:]
+
+        result = self.linear_interpolate(x, points)
+        return result
+    
+    def linear_interpolate(self, x: float, points: list[tuple]) -> float:
+        for i in range(len(points) - 1):
+            xi, yi = points[i]
+            x_next, y_next = points[i + 1]
+
+            if xi <= x <= x_next:
+                break
+        
+        # deal with x outside the range of points
+        if x < points[0][0]:
+            xi, yi = points[0]
+            x_next, y_next = points[1]
+        elif x > points[-1][0]:
+            xi, yi = points[-2]
+            x_next, y_next = points[-1]
+
+        return (y_next - yi)/(x_next - xi) * (x - xi) + yi
 
     def parenthetic_contents(self, string):
         """Generate parenthesized contents in string as pairs (level, contents)."""
