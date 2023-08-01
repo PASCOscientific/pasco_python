@@ -11,7 +11,7 @@ For project examples, view our [pasco_python_examples repository](https://github
 # Contents:
 - [Getting Started](#how-do-i-get-started)
 - [Compatible Sensors](#compatible-sensors)
-- [Connecting to a Sensor](#step-1-create-an-object-for-the-device)
+- [Connecting to a Sensor](#step-1-import-the-appropriate-module)
 - [Collecting Data](#lets-put-it-all-together)
 - [//code.Node](#codenode)
 - [//control.Node](#controlnode)
@@ -28,30 +28,14 @@ pip install pasco
 ```
 
 
-In your project file, import the `PASCOBLEDevice` class and/or the `CodeNodeDevice` class or `ControlNodeDevice` class.
+In your project file, import the `PASCOBLEDevice` class, the `CodeNodeDevice` class, and/or the `ControlNodeDevice` class.
 
-To connect to a regular wireless sensor
 
-```
-from src.pasco.pasco_ble_device import PASCOBLEDevice 
-# src is necessary until pip repository is updated
-```
-
-To connect to a /\/code.Node (Note: The Icons package is optional)
-
-```
-from src.pasco.code_node_device import CodeNodeDevice, Icons
-```
-
-To connect to a /\/control.Node
-
-```
-from src.pasco.control_node_device import ControlNodeDevice
-```
 
 
 # Compatible Sensors
 
+- /\/control.Node
 - /\/code.Node
 - Smart Cart
 - Wireless Acceleration Altimter
@@ -75,10 +59,6 @@ from src.pasco.control_node_device import ControlNodeDevice
 - Wireless Voltage
 - Wireless Weather
 
-Testing
-
-- Wireless Blood Pressure
-- Wireless Soil Moisture
 
 # Connecting to a sensor
 
@@ -110,7 +90,7 @@ Each "sensor" can have multiple measurements
 `device.connect(ble_device: BLEDevice)` Connect to a device using the object returned from the scan command.  
 `device.connect_by_id(pasco_device_id: string)` Connect to a device using the 6 digit ID printed on the sensor.  
 `device.disconnect()` Disconnect from a device  
-`device.is_connected` Returns true/false to tell device connection state  
+`device.is_connected()` Returns true/false to tell device connection state  
 `device.get_sensor_list()` Get a list of sensors that a device has  
 `device.get_measurement_list(sensor_name: string [optional])` Returns all the measurements that a device has  
 `device.read_data(measurement: string)` Get a single reading from a single measurement  
@@ -118,11 +98,31 @@ Each "sensor" can have multiple measurements
 `device.get_measurement_unit(measurement: string)` Get the default units for a single measurement  
 `device.get_measurement_unit_list(measurements: List[string])` Get a list of default units for multiple measurements
 
-PASCO's Bluetooth sensors will turn off after 5 minutes of no activity. To keep the device on, call the `device.keepalive()` method. This will keep the connection active without requesting any new data.
 
 ---
 
-## Step 1: Create an object for the device
+## Step 1: Import the appropriate module
+
+For a regular wireless sensor:
+
+```
+from src.pasco.pasco_ble_device import PASCOBLEDevice 
+# src is necessary until pip repository is updated
+```
+
+To connect to a /\/code.Node (Note: The Icons package is optional):
+
+```
+from src.pasco.code_node_device import CodeNodeDevice, Icons
+```
+
+To connect to a /\/control.Node:
+
+```
+from src.pasco.control_node_device import ControlNodeDevice
+```
+
+## Step 2: Create an object for the device
 
 ```
 my_sensor = PASCOBLEDevice()
@@ -133,7 +133,7 @@ If you know the device's 6-digit serial ID (printed on the device) you can quick
 
 Otherwise perform Steps 2 & 3 to scan/connect.
 
-## Step 2: Scan for available bluetooth (BLE) sensors
+## Step 3: Scan for available bluetooth (BLE) sensors
 
 `my_sensor.scan()` Returns list of BLE devices found in the scan. `my_sensor.scan('Temperature')` Returns a list of Temperature sensors found
 
@@ -143,7 +143,7 @@ How to use:
 found_devices = my_sensor.scan()
 ```
 
-## Step 3: Connect to a BLE sensor found from the scan
+## Step 4: Connect to a BLE sensor found from the scan
 
 The scan command will return a list of found devices. Iterate through that list to determine which device you want to connect to.
 
@@ -162,7 +162,7 @@ else:
     exit(1)
 ```
 
-### Example of how to scan/connect
+### Putting it all together:
 
 ```
 from src.pasco.pasco_ble_device import PASCOBLEDevice
@@ -176,27 +176,26 @@ if found_devices:
         print(f'{i}: {ble_device.name}')
 
     selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-    code_node_device.connect(found_devices[int(selected_device)])
+    my_sensor.connect(found_devices[int(selected_device)])
 else:
     print("No Devices Found")
     exit(1)
 
-my_sensor.connect(ble_device)
 print(f"measurements: {my_sensor.get_measurement_list()}")
 my_sensor.disconnect()
 ```
 
-## Step 4: View Device Sensor(s)
+## Step 5: View Device Sensor(s)
 
 A device can have one or more on-board sensors. To view the list of sensors use the command `my_sensor.get_sensor_list()`. This returns a list of sensor names that a device has.
 
-## Step 5: View Device Measurement(s)
+## Step 6: View Device Measurement(s)
 
 Each sensor in the device can have one or more measurements. If you want to view all the measurements that a device has, use the command `my_sensor.get_measurement_list()`.
 
 To view only the measurements that a sensor has, use the sensor name (from the list in Step 4) like this `my_sensor.get_measurement_list('WirelessWeatherSensor')`.
 
-## Step 6: Start collecting data!
+## Step 7: Start collecting data!
 
 The measurement variable names come from Step 4
 
@@ -250,16 +249,10 @@ if found_devices:
         print(f'{i}: {ble_device.name}')
 
     selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-    code_node_device.connect(found_devices[int(selected_device)])
+    my_sensor.connect(found_devices[int(selected_device)])
 else:
     print("No Devices Found")
     exit(1)
-
-# Auto connect if only one sensor found
-selected_device = input('Select a device: ') if len(found_devices) > 1 else 0
-
-ble_device = found_devices[int(selected_device)]
-my_sensor.connect(ble_device)
 
 # Loop that will read/display the data 100 times
 for i in range(100):
@@ -392,6 +385,7 @@ while code_node.read_data('Button1') == 0:
 code_node.scroll_text_in_array('Goodbye')
 
 code_node.reset()
+code_node.disconnect()
 ```
 
 ## Example: Connect to multiple sensors

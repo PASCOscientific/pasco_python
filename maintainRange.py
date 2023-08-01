@@ -14,10 +14,10 @@ This won't work until we figure out how to read from the RangeFinder
 
 def maintain(target_distance):
     bot = PascoBot()
-    bot.connect_by_id("651-400")
+    bot.connect_by_id("664-591")
     
     for _ in range(100):
-        distance = bot.read_data("Range")
+        distance = bot.read_data("Distance")
         if distance != 0:
             print(distance)
             bot.drive((distance-target_distance)/10, 1)
