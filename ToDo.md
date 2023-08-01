@@ -33,7 +33,8 @@
 
 
 ### Greenhouse
-- [ ] Greenhouse light
+
+- [x] Greenhouse light
 
 ## Sensing
 
@@ -65,7 +66,7 @@
 - [x] current 2
 
 ### Greenhouse
-- [ ] Greenhouse sensor
+- [x] Greenhouse sensor
 
 ## Calibration
 

@@ -127,7 +127,6 @@ class ControlNodeDevice(PASCOBLEDevice):
         raw_stepper_info[1] += raw_stepper_info[5] << 8
         raw_stepper_info = raw_stepper_info[0:4]
         degree_info = [data/self.STEPS_PER_REV * self.DEGREES_PER_REV for data in raw_stepper_info]
-        print(degree_info)
         return degree_info
 
     def _send_stepper_command(self, speedA, accelerationA, distanceA, speedB, accelerationB, distanceB):
@@ -404,7 +403,7 @@ class ControlNodeDevice(PASCOBLEDevice):
         Args:
             port (str): Power Out port
             channel (int): Channel of the power output board
-            output (either 'USB' or 'terminal'): output location
+            output_type (either 'USB' or 'terminal'): output location
             value (0|1 for USB output or % for terminal): ON/OFF or % power
 
         The request message is as follows:
