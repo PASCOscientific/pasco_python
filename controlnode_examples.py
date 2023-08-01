@@ -55,15 +55,28 @@ def power_board(controlNode):
     time.sleep(1)
 
 
+def greenhouse_light(controlNode):
+    """
+    plug the greenhouse light into port B of the control node.
+    This will start with the light red and gradually transition 
+    through purple to blue, then turn off
+    """
+    for value in range(0, 100, 10):
+        print(value)
+        controlNode.set_greenhouse_light('B', 100 - value, value)
+        time.sleep(1)
+    controlNode.set_greenhouse_light('B', 0, 0)
+
+
 def main():
     controlNode = ControlNodeDevice()
-    sensor_id = '664-591' # replace this with the 6-digit id of your control node
+    sensor_id = '651-400' # replace this with the 6-digit id of your control node
     controlNode.connect_by_id(sensor_id)
     # to find what measurements are available, call get_measurement_list()
     print(controlNode.get_measurement_list())
 
     # Pick what you want to try here
-    servos(controlNode)
+    greenhouse_light(controlNode)
 
     controlNode.reset()
     controlNode.disconnect()

@@ -103,12 +103,21 @@ def test_servos_current():
         time.sleep(0.1)
     controlNode.set_servos(0, 0, 0, 0)
 
+# ------- Set greenhouse light -------
+def test_greenhouse_light():
+    # This will start with the light red and gradually transition through purple to blue.
+    for value in range(0, 100, 10):
+        print(value)
+        controlNode.set_greenhouse_light('B', 100 - value, value)
+        time.sleep(1)
+    controlNode.set_greenhouse_light('B', 0, 0)
+
 
 if __name__ == "__main__":
     controlNode = ControlNodeDevice()
-    controlNode.connect_by_id('651-400')
-    test_steppers_continuous()
-    test_steppers_through()
+    controlNode.connect_by_id('653-498')
+    measurement_list = controlNode.get_measurement_list()
+    [print(f"{m}: {controlNode.read_data(m)}") for m in measurement_list]
     controlNode.disconnect()
 
 

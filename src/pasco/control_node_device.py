@@ -21,6 +21,8 @@ class ControlNodeDevice(PASCOBLEDevice):
     DEGREES_PER_REV = 360
     DECISTEPS_PER_STEP = 10
     
+    LSB_PWM_PERIOD = 0xd0                   # Least Significant Byte for Pulse Width Modulation period
+    MSB_PWM_PERIOD = 0x07                   # Most Significant Byte for Pulse Width Modulation period
 
     CN_ACC_ID_NONE = 0
     CN_ACC_ID_MOTOR_BASE = 2500
@@ -462,8 +464,8 @@ class ControlNodeDevice(PASCOBLEDevice):
         first_pin_index = first_pin_indices[(port.upper(), channel)]
 
         # 2. What are we talking to? USB or terminal?
-        LSB_PWM_period = 0xd0 if output_type == 'terminal' else 0x00
-        MSB_PWM_period = 0x07 if output_type == 'terminal' else 0x00
+        lsb_pwm_period = self.LSB_PWM_PERIOD if output_type == 'terminal' else 0x00
+        msb_pwm_period = self.MSB_PWM_PERIOD if output_type == 'terminal' else 0x00
         # these values will be what we end up sending
         values = [0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -482,7 +484,7 @@ class ControlNodeDevice(PASCOBLEDevice):
 
         
         cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_SET_SIGNALS, which_pins, 
-            LSB_PWM_period, MSB_PWM_period
+            lsb_pwm_period, msb_pwm_period
         ]
         cmd.extend(values)
         self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
@@ -506,25 +508,62 @@ class ControlNodeDevice(PASCOBLEDevice):
         cmd = [ self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_SET_BEEPER, frequency & 0xFF, frequency>>8 & 0XFF ]
         self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
 
+    # ----------- Greenhouse light -----------------
+
+    def set_greenhouse_light(self, port: str, Red: float, Blue: float) -> None:
+        """
+        control the greenhouse light
+        args:
+            port (str): either A or B. Port of the control node to which the greenhouse light is attached
+            R (float): percent power of red light
+            B (float): percent power of blue light
+
+        The message encoding is as follows:
+        - which_pins (either [A0, A2] or [B0, B2] depending on the port selected)
+          These are encoded: 0x05        0x50 (see comment for power output board)
+        - PWM value of Red  (0-255)
+        - PWM value of Blue (0-255)
+        """
+        which_pins = {'A':0x0F, 'B':0xF0}
+        # scale up from 0-100 (percent) to 255-0
+        # because the brightness is inverted. +5V from the control node turns off the light.
+        Red_value = int((100-Red) * 2.55) + 1
+        Blue_value = int((100-Blue) * 2.55) + 1
+        # As described in the power output board docstring, the last 8 bytes of the command
+        # are the values for ports A and B: 4 for A, then 4 for B
+        if port.upper() == 'A':
+            values = [Red_value, 0, Blue_value, 0] 
+        elif port.upper() == 'B':
+            values = [0, 0, 0, 0, Red_value, 0, Blue_value, 0]
+        else:
+            raise self.InvalidParameter
+        
+        cmd = [self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_SET_SIGNALS, which_pins[port.upper()], self.LSB_PWM_PERIOD, self.MSB_PWM_PERIOD]
+        cmd.extend(values)
+        self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
+
 
 # --------- Convenience -----------
 
     def reset(self):
         """
-        Reset the speaker and LEDs on the control node
+        Turn off all accessories on the control node
+        We do this by sending a single stop accessories byte
         """
         
         if self.is_connected() is False:
             raise self.DeviceNotConnected()
-
-        self.set_sound_frequency(0)
-        self.set_servos(0, 0, 0, 0)
-        self.rotate_steppers_through(0, 0, 0, 0, 0, 0)
-        self.set_power_out('A', 1, 'USB', 0)
-        self.set_power_out('A', 2, 'USB', 0)
-        self.set_power_out('B', 1, 'USB', 0)
-        self.set_power_out('B', 2, 'USB', 0)
-
+        
+        else:
+            cmd = [self.GCMD_CONTROL_NODE_CMD, self.CTRLNODE_CMD_STOP_ACCESSORIES]
+            self._loop.run_until_complete(self.write_await_callback(self.SENSOR_SERVICE_ID, cmd))
+            
+    def disconnect(self):
+        """
+        Extend the pasco_ble_device's disconnect to first reset all control node devices
+        """
+        self.reset()
+        super().disconnect()
 
 def main():
     
