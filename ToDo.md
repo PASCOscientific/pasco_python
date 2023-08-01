@@ -33,7 +33,6 @@
 
 
 ### Greenhouse
-
 - [x] Greenhouse light
 
 ## Sensing
