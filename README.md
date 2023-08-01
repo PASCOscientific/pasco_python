@@ -507,3 +507,4 @@ pip install pasco
 Check if the red light is blinking. If so you're good to go.
 ### 4. Is the device already connected?
 Check if the light is green. If so, hold down the power button to turn the device off, and press it to turn the device on again. When the light blinks red you're good.
+### 5. Fire the intern.

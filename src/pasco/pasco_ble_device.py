@@ -1103,6 +1103,10 @@ class PASCOBLEDevice():
 
 
     def _get_measurement_value(self, sensor_id, measurement_id):
+        """
+        Now that we have the measurement values for the sensor, 
+        calculate a user-readable data value as outlined in the datasheet. 
+        """
         m = self._device_measurements[sensor_id][measurement_id]
 
         result_value = None
@@ -1111,180 +1115,197 @@ class PASCOBLEDevice():
             pass
 
         if 'Inputs' in m:
-            # Multiple Input
-            if m['Type'] == 'ThreeInputVector':
-                inputs = m['Inputs'].split(',')
-                missing_param = False
-                for input in inputs:
-                    if self._sensor_data[sensor_id][int(input)] is None:
-                        missing_param = True
-                        break
-                if missing_param is False:
-                    ax = self._sensor_data[sensor_id][int(inputs[0])]
-                    ay = self._sensor_data[sensor_id][int(inputs[1])]
-                    az = self._sensor_data[sensor_id][int(inputs[2])]
-                    result_value = math.sqrt(ax**2 + ay**2 + az**2)
-            elif m['Type'] == 'Select': # For Current, Voltage and Accel
-                inputs = m['Inputs'].split(',')
-
-                need_input = int(inputs[0])
-
-                if self._sensor_data[sensor_id][need_input] is not None:
-                    result_value = self._sensor_data[sensor_id][need_input]
-                else:
-                    result_value = self._get_measurement_value(sensor_id, need_input)
-
-            # Single Input
-            else:
-                need_input = int(m['Inputs'])
-                input_value = None
-
-                if self._sensor_data[sensor_id][need_input] is not None:
-                    input_value = self._sensor_data[sensor_id][need_input]
-                else:
-                    input_value = self._get_measurement_value(sensor_id, need_input)
-
-                if (input_value is not None):
-                    if m['Type'] == 'UserCal':
-                        params = m['Params'].split(',')
-                        result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
-
-                    elif m['Type'] == 'FactoryCal':
-                        if 'FactoryCalParams' in m and len(m['FactoryCalParams']) == 4:
-                            params = m['FactoryCalParams']
-                        else:
-                            params = m['Params'].split(',')
-                        result_value = self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
-
-                    elif m['Type'] == 'LinearConv':
-                        params = m['Params'].split(',')
-                        result_value = self._calc_linear_params(input_value, float(params[0]), float(params[1]))
-
-                    elif m['Type'] == 'Derivative':
-                        if self._sensor_data_prev[sensor_id][m['Inputs']] != None:
-                            prev_input_value = self._sensor_data_prev[sensor_id][m['Inputs']]
-                            result_value = (input_value - prev_input_value) / 2
-
-                    elif m['Type'] == 'RotaryPos':
-                        params = m['Params'].split(',')
-                        m['Value'] += self._calc_rotary_pos(input_value, float(params[0]), float(params[1]))
-                        result_value = m['Value']
+            result_value = self._calculate_with_input(m, sensor_id)
 
         if ('Equation' in m):
-            raw_equation = m['Equation']
-
-            eqn_variables = re.findall(r"\[([0-9_]+)\]", raw_equation)
-
-            for eVar in eqn_variables:
-                bracket_val = '[' + eVar + ']'
-                eVarKey = int(eVar)
-
-                raw_equation = raw_equation.replace('^', '**')
-
-                # replace the reference to a value in the callback with its value
-                if self._sensor_data[sensor_id][eVarKey] != None:
-                    replace_with = str(self._sensor_data[sensor_id][eVarKey])
-                    raw_equation = raw_equation.replace(bracket_val, replace_with)
-                else:
-                    replace_with = str(self._get_measurement_value(sensor_id, eVarKey))
-                    raw_equation = raw_equation.replace(bracket_val, replace_with)
-
-
-            if raw_equation.startswith('table'):
-                return self._equation_eval_table(raw_equation)
-
-            # organize the equation by parentheses. 
-            paranthetic_vals = list(self.parenthetic_contents(raw_equation))
-
-            for i, eqn in paranthetic_vals:
-                if (eqn.startswith('limit')):
-                    limit_eqn = eqn.replace('limit(','')
-                    limit_eqn = limit_eqn.replace(')','')
-                    limit_vals = limit_eqn.split(',')
-                    val = float(limit_vals[0])
-                    min_val = float(limit_vals[1])
-                    max_val = float(limit_vals[2])
-                    
-                    if (val < min_val):
-                        val = min_val
-                    elif (val > max_val):
-                        val = max_val
-        
-                    raw_equation = raw_equation.replace(eqn, str(val))
-                
-                # TODO: Bring other equations into here
-
-            if raw_equation.startswith('usound'):
-                usound_eqn = raw_equation.replace('usound(','')
-                usound_eqn = usound_eqn.replace(')','')
-                usound_vals = usound_eqn.split(',')
-
-                ping_echo_time = float(usound_vals[0])
-                speed_of_sound = float(usound_vals[1])
-
-                result_value = (ping_echo_time/1000000) * speed_of_sound / 2 # result in meters
-
-            elif raw_equation.startswith('dewpoint'):
-                dewpoint_eqn = raw_equation.replace('dewpoint(','')
-                dewpoint_eqn = dewpoint_eqn.replace(')','')
-                dewpoint_vals = dewpoint_eqn.split(',')
-
-                if (dewpoint_vals[0] != 'None'):
-                    temp_c = float(dewpoint_vals[0])
-                    relative_humidity = float(dewpoint_vals[1])
-                    vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
-                    vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
-
-                    result_value = (-443.22 + 237.7 * math.log(vapor_pressure_actual)) / (-math.log(vapor_pressure_actual) + 19.08)
-
-            elif raw_equation.startswith('windchill'):
-                windchill_eqn = raw_equation.replace('windchill(','')
-                windchill_eqn = windchill_eqn.replace(')','')
-                windchill_vals = windchill_eqn.split(',')
-
-                if windchill_vals[0] != 'None' and windchill_vals[1] != 'None':
-                    temp_f = (9 * float(windchill_vals[0]) / 5) + 32
-                    wind_mph = float(windchill_vals[1]) * 2.237
-
-                    if( wind_mph < 3.0 or temp_f > 50.0 ):
-                        wind_chill_f = temp_f
-                    else:
-                        wind_chill_f = 35.74 + 0.6215 * temp_f - 35.75 * pow( wind_mph, 0.16 ) + 0.4275 * temp_f * pow( wind_mph, 0.16 )
-
-                    result_value = 5 * (wind_chill_f - 32) / 9
-            
-            elif raw_equation.startswith('heatindex'):
-                heatindex_eqn = raw_equation.replace('heatindex(','')
-                heatindex_eqn = heatindex_eqn.replace(')','')
-                heatindex_vals = heatindex_eqn.split(',')
-
-                temp_c = float(heatindex_vals[0])
-                relative_humidity = float(heatindex_vals[1])
-                vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
-                vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
-
-                result_value = temp_c + 0.55555 * (vapor_pressure_actual - 10.0)
-
-            elif raw_equation.startswith('codenodepos'):
-                None
-
-            else:
-                try:
-                    raw_equation = raw_equation.replace('sqrt', 'math.sqrt')
-                    raw_equation = raw_equation.replace('atan2', 'math.atan2')
-                    raw_equation = raw_equation.replace('log', 'math.log10')
-
-                    if "None" in raw_equation:
-                        result_value = None
-                    else:
-                        result_value = eval(raw_equation)
-
-                except:
-                    # equation likely has a string that we don't recognize yet
-                    raise self.InvalidEquation("Error decoding the raw data")
+            result_value = self._calculate_with_equation(m, sensor_id)
 
         return result_value
     
+    def _calculate_with_input(self, m, sensor_id):
+        """
+        Calculate measurement value for a measurement that has an input parameter
+        Args:
+            m (dict): measurement attributes
+            sensor_id (int): id of sensor from which we got the measurement
+        """
+        # Multiple Input
+        if m['Type'] == 'ThreeInputVector':
+            inputs = m['Inputs'].split(',')
+            missing_param = False
+            for input in inputs:
+                if self._sensor_data[sensor_id][int(input)] is None:
+                    missing_param = True
+                    break
+            if missing_param is False:
+                ax = self._sensor_data[sensor_id][int(inputs[0])]
+                ay = self._sensor_data[sensor_id][int(inputs[1])]
+                az = self._sensor_data[sensor_id][int(inputs[2])]
+                return math.sqrt(ax**2 + ay**2 + az**2)
+        elif m['Type'] == 'Select': # For Current, Voltage and Accel
+            inputs = m['Inputs'].split(',')
+
+            need_input = int(inputs[0])
+
+            if self._sensor_data[sensor_id][need_input] is not None:
+                return self._sensor_data[sensor_id][need_input]
+            else:
+                return self._get_measurement_value(sensor_id, need_input)
+
+        # Single Input
+        else:
+            need_input = int(m['Inputs'])
+            input_value = None
+
+            if self._sensor_data[sensor_id][need_input] is not None:
+                input_value = self._sensor_data[sensor_id][need_input]
+            else:
+                input_value = self._get_measurement_value(sensor_id, need_input)
+
+            if (input_value is not None):
+                if m['Type'] == 'UserCal':
+                    params = m['Params'].split(',')
+                    return self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
+
+                elif m['Type'] == 'FactoryCal':
+                    if 'FactoryCalParams' in m and len(m['FactoryCalParams']) == 4:
+                        params = m['FactoryCalParams']
+                    else:
+                        params = m['Params'].split(',')
+                    return self._calc_4_params(input_value, float(params[0]), float(params[1]), float(params[2]), float(params[3]))
+
+                elif m['Type'] == 'LinearConv':
+                    params = m['Params'].split(',')
+                    return self._calc_linear_params(input_value, float(params[0]), float(params[1]))
+
+                elif m['Type'] == 'Derivative':
+                    if self._sensor_data_prev[sensor_id][m['Inputs']] != None:
+                        prev_input_value = self._sensor_data_prev[sensor_id][m['Inputs']]
+                        return (input_value - prev_input_value) / 2
+
+                elif m['Type'] == 'RotaryPos':
+                    params = m['Params'].split(',')
+                    m['Value'] += self._calc_rotary_pos(input_value, float(params[0]), float(params[1]))
+                    return m['Value']
+    
+    def _calculate_with_equation(self, m, sensor_id):
+        """
+        Calculate measurement value for a measurement that has a calculation parameter in the datasheet
+        Args:
+            m (dict): measurement attributes
+            sensor_id (int): id of sensor from which we got the measurement
+        """
+        raw_equation = m['Equation']
+
+        eqn_variables = re.findall(r"\[([0-9_]+)\]", raw_equation)
+
+        for eVar in eqn_variables:
+            bracket_val = '[' + eVar + ']'
+            eVarKey = int(eVar)
+
+            raw_equation = raw_equation.replace('^', '**')
+
+            # replace the reference to a value in the callback with its value
+            if self._sensor_data[sensor_id][eVarKey] != None:
+                replace_with = str(self._sensor_data[sensor_id][eVarKey])
+                raw_equation = raw_equation.replace(bracket_val, replace_with)
+            else:
+                replace_with = str(self._get_measurement_value(sensor_id, eVarKey))
+                raw_equation = raw_equation.replace(bracket_val, replace_with)
+
+
+        if raw_equation.startswith('table'):
+            return self._equation_eval_table(raw_equation)
+
+        # organize the equation by parentheses. 
+        paranthetic_vals = list(self.parenthetic_contents(raw_equation))
+
+        for i, eqn in paranthetic_vals:
+            if (eqn.startswith('limit')):
+                limit_eqn = eqn.replace('limit(','')
+                limit_eqn = limit_eqn.replace(')','')
+                limit_vals = limit_eqn.split(',')
+                val = float(limit_vals[0])
+                min_val = float(limit_vals[1])
+                max_val = float(limit_vals[2])
+                
+                if (val < min_val):
+                    val = min_val
+                elif (val > max_val):
+                    val = max_val
+    
+                raw_equation = raw_equation.replace(eqn, str(val))
+            
+            # TODO: Bring other equations into here
+
+        if raw_equation.startswith('usound'):
+            usound_eqn = raw_equation.replace('usound(','')
+            usound_eqn = usound_eqn.replace(')','')
+            usound_vals = usound_eqn.split(',')
+
+            ping_echo_time = float(usound_vals[0])
+            speed_of_sound = float(usound_vals[1])
+
+            return (ping_echo_time/1000000) * speed_of_sound / 2 # result in meters
+
+        elif raw_equation.startswith('dewpoint'):
+            dewpoint_eqn = raw_equation.replace('dewpoint(','')
+            dewpoint_eqn = dewpoint_eqn.replace(')','')
+            dewpoint_vals = dewpoint_eqn.split(',')
+
+            if (dewpoint_vals[0] != 'None'):
+                temp_c = float(dewpoint_vals[0])
+                relative_humidity = float(dewpoint_vals[1])
+                vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
+                vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
+
+                return (-443.22 + 237.7 * math.log(vapor_pressure_actual)) / (-math.log(vapor_pressure_actual) + 19.08)
+
+        elif raw_equation.startswith('windchill'):
+            windchill_eqn = raw_equation.replace('windchill(','')
+            windchill_eqn = windchill_eqn.replace(')','')
+            windchill_vals = windchill_eqn.split(',')
+
+            if windchill_vals[0] != 'None' and windchill_vals[1] != 'None':
+                temp_f = (9 * float(windchill_vals[0]) / 5) + 32
+                wind_mph = float(windchill_vals[1]) * 2.237
+
+                if( wind_mph < 3.0 or temp_f > 50.0 ):
+                    wind_chill_f = temp_f
+                else:
+                    wind_chill_f = 35.74 + 0.6215 * temp_f - 35.75 * pow( wind_mph, 0.16 ) + 0.4275 * temp_f * pow( wind_mph, 0.16 )
+
+                return 5 * (wind_chill_f - 32) / 9
+        
+        elif raw_equation.startswith('heatindex'):
+            heatindex_eqn = raw_equation.replace('heatindex(','')
+            heatindex_eqn = heatindex_eqn.replace(')','')
+            heatindex_vals = heatindex_eqn.split(',')
+
+            temp_c = float(heatindex_vals[0])
+            relative_humidity = float(heatindex_vals[1])
+            vapor_pressure_sat = 6.11 * pow( 10, (7.5 * temp_c) / (237.7 + temp_c) )
+            vapor_pressure_actual = (relative_humidity * vapor_pressure_sat) / 100
+
+            return temp_c + 0.55555 * (vapor_pressure_actual - 10.0)
+
+        elif raw_equation.startswith('codenodepos'):
+            None
+
+        else:
+            try:
+                raw_equation = raw_equation.replace('sqrt', 'math.sqrt')
+                raw_equation = raw_equation.replace('atan2', 'math.atan2')
+                raw_equation = raw_equation.replace('log', 'math.log10')
+
+                if "None" in raw_equation:
+                    return None
+                else:
+                    return eval(raw_equation)
+
+            except:
+                # equation likely has a string that we don't recognize yet
+                raise self.InvalidEquation("Error decoding the raw data")
 
     def _equation_eval_table(self, raw_equation: str) -> float:
         """
@@ -1328,6 +1349,7 @@ class PASCOBLEDevice():
             x_next, y_next = points[-1]
 
         return (y_next - yi)/(x_next - xi) * (x - xi) + yi
+
 
     def parenthetic_contents(self, string):
         """Generate parenthesized contents in string as pairs (level, contents)."""

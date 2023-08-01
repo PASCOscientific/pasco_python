@@ -2,7 +2,7 @@
 
 
 ## Setting
----
+
 ### Steppers
 
 - [x] control high speed steppers:
@@ -11,13 +11,13 @@
     - [x] `rotate_stepper(s)_through`
 
 - [x] control low speed steppers:
-    - [ ] `rotate_stepper(s)_continously`
-    - [ ] `stop_stepper(s)`
-    - [ ] `rotate_stepper(s)_through`
+    - [x] `rotate_stepper(s)_continously`
+    - [x] `stop_stepper(s)`
+    - [x] `rotate_stepper(s)_through`
 
 ### Speaker
 - [x] set speaker frequency
-- [ ] turn speaker on
+- [x] turn speaker on
 
 ### Servos
 
@@ -30,9 +30,13 @@
 - [x] Set power to CH2 USB
 - [x] Set power to CH1 terminal
 - [x] Set power to CH2 terminal
----
+
+
+### Greenhouse
+- [ ] Greenhouse light
+
 ## Sensing
----
+
 
 ### Internal Sensors
 - [x] Accelerationx
@@ -47,8 +51,8 @@
 - [ ] velocity 
 
 ### Low Speed Steppers
-- [ ] angle
-- [ ] angular velocity
+- [x] angle
+- [x] angular velocity
 - [ ] position (based on pascobot wheel sizes)
 - [ ] velocity
 
@@ -60,12 +64,21 @@
 - [x] current 1
 - [x] current 2
 
+### Greenhouse
+- [ ] Greenhouse sensor
+
+## Calibration
+
 ### Zero Sensors: yet to begin
 
+### Factory Calibration: yet to begin
 
----
-## Documentation
----
+
+## Code
+
+### Documentation
 
 - [x] `pasco_ble_device.py`
-- [ ] `control_node_device.py`
+- [x] `control_node_device.py`
+
+### Refactoring: yet to begin
