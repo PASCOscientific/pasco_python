@@ -7,6 +7,9 @@ Objectives:
 Create and test functionality for all functions of the 
 //control.Node defined in SPARKvue.
 """
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.pasco.control_node_device import ControlNodeDevice
 import time
@@ -115,7 +118,7 @@ def test_greenhouse_light():
 
 if __name__ == "__main__":
     controlNode = ControlNodeDevice()
-    controlNode.connect_by_id('653-498')
+    controlNode.connect_by_id('653-498') #Put your 6-digit sensor ID here
     measurement_list = controlNode.get_measurement_list()
     [print(f"{m}: {controlNode.read_data(m)}") for m in measurement_list]
     controlNode.disconnect()

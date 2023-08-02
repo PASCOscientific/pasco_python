@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.pasco.pasco_bot import PascoBot
 from src.pasco.pasco_ble_device import PASCOBLEDevice
 import time
@@ -73,7 +77,7 @@ def test_force():
 if __name__ == "__main__":
 
     gary = PascoBot()
-    gary.connect_by_id('664-591')
+    gary.connect_by_id('664-591') #Put your 6-digit sensor ID here
 
     # frank is a force sensor
     frank = PASCOBLEDevice()

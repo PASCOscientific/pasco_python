@@ -976,6 +976,7 @@ class PASCOBLEDevice():
 
 
     def _calc_4_params(self, raw, x1, y1, x2, y2):
+        # This does slope offset according to the factory calibration
         b = (x1*y2 - x2*y1)/(x1-x2)
         if (x1 != 0):
             m = (y1 - b)/x1

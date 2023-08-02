@@ -1,8 +1,12 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.pasco import PASCOBLEDevice, CodeNodeDevice, Icons
 import time
 
 code_node = CodeNodeDevice()
-code_node.connect_by_id('614-906')
+code_node.connect_by_id('614-906') #Put your 6-digit sensor ID here
 
 start = time.monotonic()
 for i in range(100):

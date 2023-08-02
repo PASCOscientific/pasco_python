@@ -1,11 +1,14 @@
 # sensors.py
 # connect to any pasco device and get a benchmark sample rate
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.pasco import PASCOBLEDevice
 import time
 
 sensor = PASCOBLEDevice()
-sensor.connect_by_id('651-400')
+sensor.connect_by_id('651-400') # Put your 6-digit sensor ID here
 [print(measurement) for measurement in sensor.get_measurement_list()]
 
 start = time.monotonic()

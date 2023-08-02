@@ -6,6 +6,10 @@ The control node supports:
 - Plugin sensors such as rangefinder and line follower (connected in Sensor port)
 This python file shows examples of how to work with these
 """
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from src.pasco.control_node_device import ControlNodeDevice
 import time
 
