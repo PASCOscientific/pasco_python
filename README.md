@@ -56,11 +56,6 @@ from pasco import CodeNodeDevice, Icons
 - Wireless Voltage
 - Wireless Weather
 
-Testing
-
-- Wireless Blood Pressure
-- Wireless Soil Moisture
-
 # Connecting to a sensor
 
 ## Device Structure
