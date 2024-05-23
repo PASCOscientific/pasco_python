@@ -1,4 +1,4 @@
-<!DOCTYPE Datasheets>
+datasheet = '''<!DOCTYPE Datasheets>
   <Datasheets Version="1.0">
     <GenericMeasurements>
       <Measurement ID="0" Tag="None" UnitGroup="None"/>
@@ -97,6 +97,9 @@
       <Measurement ID="95" Tag="Brightness" UnitGroup="Percent"/>
       <Measurement ID="96" Tag="Loudness" UnitGroup="Percent"/>
       <Measurement ID="97" Tag="LineDetectors" UnitGroup="Unitless"/>
+      <Measurement ID="98" Tag="Ozone" UnitGroup="PartsPerNotation"/>
+      <Measurement ID="99" Tag="VOC" UnitGroup="Unitless"/>
+      <Measurement ID="100" Tag="Particulate" UnitGroup="MassDensity"/>
     </GenericMeasurements>
     <!-- DisplayTypes section is used to convert between new xml datasheet tags and old sds datasheet IDs -->
     <DisplayTypes>
@@ -246,6 +249,7 @@
       <UnitGroup ID="10" Tag="Angle" Default="rad">
         <Unit ID="0" Tag="rad" Scale="1" Offset="0"/>
         <Unit ID="1" Tag="deg" Scale="57.2957795" Offset="0"/>
+        <Unit ID="2" Tag="rev" Scale="0.159155" Offset="0" />
         <Group Default="deg" Tag="GPS" Units="deg"/>
       </UnitGroup>
       <UnitGroup ID="11" Tag="AngularVelocity" Default="radps">
@@ -257,6 +261,8 @@
       <UnitGroup ID="12" Tag="AngularAcceleration" Default="radps2">
         <Unit ID="0" Tag="radps2" Scale="1" Offset="0"/>
         <Unit ID="1" Tag="degps2" Scale="57.2957795" Offset="0"/>
+        <Unit ID="2" Tag="revpmps" Scale="9.549297" Offset="0"/>
+        <Unit ID="3" Tag="revps2" Scale="0.159155" Offset="0"/>
       </UnitGroup>
       <UnitGroup ID="13" Tag="Charge" Default="uC">
         <Unit ID="0" Tag="nC" Scale="1" Offset="0"/>
@@ -399,6 +405,8 @@
       <UnitGroup ID="44" Tag="MassDensity">
         <Unit ID="0" Tag="kgpm3" Scale="1" Offset="0"/>
         <Unit ID="1" Tag="gpm3" Scale="1000" Offset="0"/>
+        <Unit ID="2" Tag="ugpm3" Scale="1000000000" Offset="0"/>
+        <Unit ID="3" Tag="mgpm3" Scale="1000000" Offset="0"/>
       </UnitGroup>
       <UnitGroup ID="45" Tag="Area">
         <Unit ID="0" Tag="m2" Scale="1" Offset="0"/>
@@ -442,7 +450,7 @@
       <Group ID="15" Name="2InputPGTimers" SensorIDs="21009,21010,21032,21033,23052,23053"/>
       <Group ID="16" Name="AllPGTimers" SensorIDs="21001,21005,21006,21008,21009,21010,21030,21031,21032,21033,21034,21035,23050-23053"/>
       <Group ID="17" Name="AllCounters" SensorIDs="21011,21012,21013,21021,21023,21131"/>
-      <Group ID="18" Name="Computer" SensorIDs="33000-33001"/>
+      <Group ID="18" Name="Computer" SensorIDs="32299-33001"/>
       <Group ID="19" Name="SensorGroupSparkVueSmartGate" SensorIDs="23001-23006, 23008,23010-23011,23015,23018,23019,23050-23053"/>
       <Group ID="20" Name="SensorGroupSparkVueDigAdapter" SensorIDs="23001-23006, 23008,23010-23013,23018,23019,23050-23053"/>
       <Group ID="21" Name="SensorGroupSparkVueAnalogAdapter" SensorIDs="20000-20174,20201-20299,30000-30099"/>
@@ -452,8 +460,10 @@
       <Group ID="25" Name="SmartCartSensors" SensorIDs="2025,2026,2027,2029"/>
       <Group ID="26" Name="ScienceJournal" SensorIDs="2020-2039,2043-2054,2056-2057"/>
       <Group ID="27" Name="PascoDataStreamer" SensorIDs="2020-2039,2043-2054,2056-2057"/>
-      <Group ID="28" Name="ControlNode8PinSensors" SensorIDs="2501-2502,2506"/>
-      <Group ID="29" Name="ControlNode6PinSensors" SensorIDs="2504-2505"/>
+      <Group ID="28" Name="ControlNode8PinSensors" SensorIDs="2501-2502,2506,2508"/>
+      <Group ID="29" Name="ControlNode6PinSensors" SensorIDs="2504-2505,2507"/>
+      <Group ID="30" Name="MasqueradingSensors" SensorIDs="2506,2508"/>
+      <Group ID="31" Name="Chemvue" SensorIDs="135-137,139,141-143,145,146,153,200,201,207,209-211,213,216,219,220,223,224,230,232,234,236,239,241,242,246,251,253,264,267,2020-2022,2030-2035,2037-2039,2041,2042,2049,2050,2052,2057,2073,2079,2080,2083,2084,2086,3003" />
     </SensorGroups>
     <Sensors>
       <!-- Sensor IDs 1 - 2000 are for standard Pasport sensors -->
@@ -724,12 +734,14 @@
         <SupportedCmd ID="64" Size="1"/>
       </Sensor>
       <Sensor ID="217" Tag="Spirometer" Version="2.5" Class="0" DefaultRate="50Hz" FileName="Spirometer.sds" FloatParams="0" Icon="0000800180018001700ed81b5422442a6a62424a52424a5652427a5e06600000" IconID="217" Latency="100" MaxDatasheet="8192" MaxRate="100Hz" MinRate="20Hz" Model="PS-2152" Warmup="1500">
-        <Measurement ID="0" NameTag="VolumetricFlowRate" UnitType="cfm" Type="Direct" DataSize="4" Accuracy="0.01" Display="Graph" Internal="0" Maximum="10" MeasType="VolumeFlowRate" Minimum="-10" Precision="2" ShortNameTag="VoluFlowRate" SymbolTag="flowRateVolume" TypicalMax="1" TypicalMin="-1" Visible="1" XplorerDisplay="1" IsDefaultMeas="1"/>
+        <Measurement ID="0" NameTag="VolumetricFlowRate" UnitType="cfm" Type="Direct" DataSize="4" Accuracy="0.01" Display="Graph" Internal="0" Maximum="10" MeasType="VolumeFlowRate" Minimum="-10" Precision="2" ShortNameTag="VoluFlowRate" SymbolTag="flowRateVolume" TypicalMax="1" TypicalMin="-1" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="1" NameTag="VolumetricFlowRate" UnitType="Lps" Type="LinearConv" Inputs="0" Params="0.47198,0" Accuracy="0.1" Display="Graph" Internal="0" InternalUnit="1" Maximum="5" MeasType="VolumeFlowRate" Minimum="-5" Precision="2" ShortNameTag="VoluFlowRate" SymbolTag="flowRateVolume" TypicalMax="3" TypicalMin="-3" VisibleSds="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="2" NameTag="TotalFlow" UnitType="ft3" Type="Direct" DataSize="4" Accuracy="0.01" Display="Graph" Internal="0" Maximum="0.2" MeasType="FlowVolume" Minimum="-0.2" Precision="2" ShortNameTag="TotFlow" SymbolTag="flowVolume" TypicalMax="0.1" TypicalMin="-0.1" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="3" NameTag="TotalFlow" UnitType="L" Type="LinearConv" Inputs="2" Params="28.32,0" Accuracy="0.1" Display="Graph" Internal="0" InternalUnit="1" Maximum="6" MeasType="FlowVolume" Minimum="-6" Precision="2" ShortNameTag="TotFlow" SymbolTag="flowVolume" TypicalMax="3" TypicalMin="-3" VisibleSds="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="4" NameTag="MaxFlowRate" UnitType="cfm" Type="Direct" DataSize="4" Accuracy="1" Display="Digits" Internal="0" Maximum="10" MeasType="VolumeFlowRate" Minimum="-10" Precision="2" ShortNameTag="MaxFlow" SymbolTag="Rmax" TypicalMax="1" TypicalMin="-1" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="5" NameTag="MaxFlowRate" UnitType="Lps" Type="LinearConv" Inputs="4" Params="0.47197,0" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="10" MeasType="VolumeFlowRate" Minimum="-10" Precision="2" ShortNameTag="MaxFlow" SymbolTag="Rmax" TypicalMax="10" TypicalMin="-10" VisibleSds="1" XplorerDisplay="1"/>
+        <Measurement ID="6" NameTag="PerBreathVolume" UnitType="L" Equation="perbreathvolume([1],[3],3)" MeasType="FlowVolume" Minimum="0" Maximum="10" ShortNameTag="PerBreathVol" SymbolTag="perBreathV" TypicalMin="0" TypicalMax="3" Visible="1"/>
+        <Measurement ID="7" NameTag="LungVolume" UnitType="L" Equation="2.5-[3]" MeasType="FlowVolume" Minimum="0" Maximum="10" ShortNameTag="LungVol" SymbolTag="lungV" TypicalMin="0" TypicalMax="6" Visible="1" IsDefaultMeas="1"/>
       </Sensor>
       <Sensor ID="219" Tag="UVASensor" Version="2.6" Class="0" DefaultRate="10Hz" FileName="UV Light.sds" FloatParams="0" Icon="000104010820c013e007f00ff00ff66ff00fe007e007c003c003c00340028001" IconID="219" Latency="100" MaxDatasheet="2048" MaxRate="1000Hz" Model="PS-2149" Warmup="1">
         <Measurement ID="0" NameTag="DirectValueLight" Type="Direct" DataSize="4" Accuracy="2" Display="Graph" Internal="1" Maximum="30000" Minimum="0" Precision="2" TypicalMax="300" TypicalMin="0"/>
@@ -820,21 +832,21 @@
       </Sensor>
       <Sensor ID="225" Tag="ForcePlatform" Version="2.99" Class="0" DefaultRate="20Hz" FileName="Force Platform.sds" FloatParams="0" Icon="00000000100810081008100810081008381c1008fe7f02400a500a50f81f0000" IconID="225" Latency="45000" MaxDatasheet="8192" MaxRate="2000Hz" Model="PS-2141" Warmup="20">
         <Measurement ID="0" NameTag="ScaledRawValue1" Type="LinearConv" Inputs="3" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="1" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="2" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="1" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="0" XplorerDefault="1" XplorerDisplay="1"/>
+        <Measurement ID="1" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="2" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="1" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="2" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="0" Params="6553,0,25558.5,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="1" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="3" NameTag="RawValue1" Type="RawDigital" DataSize="2" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
         <Measurement ID="6" NameTag="ScaledRawValue2" Type="LinearConv" Inputs="29" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="7" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="8" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="2" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="0" XplorerDefault="1" XplorerDisplay="1"/>
+        <Measurement ID="7" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="8" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="2" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="8" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="6" Params="6554.5,0,26040,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="2" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="11" NameTag="ScaledRawValue3" Type="LinearConv" Inputs="30" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="12" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="13" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="3" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="0" XplorerDefault="1" XplorerDisplay="1"/>
+        <Measurement ID="12" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="13" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="3" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="13" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="11" Params="6550.5,0,25596,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="3" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="16" NameTag="ScaledRawValue4" Type="LinearConv" Inputs="31" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="17" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="18" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="4" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="0" XplorerDefault="1" XplorerDisplay="1"/>
+        <Measurement ID="17" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="18" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="4" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="18" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="16" Params="6550.5,0,25655.5,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="4" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="20" NameTag="pounds1and2" Type="TwoInputCombo" Inputs="2,8" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
         <Measurement ID="22" NameTag="pounds3and4" Type="TwoInputCombo" Inputs="13,18" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
-        <Measurement ID="23" NameTag="VerticalForce" UnitType="lbs" Type="TwoInputCombo" Inputs="20,22" Params="0,1,1,0" Accuracy="1" Display="Digits" Internal="0" Maximum="1200" MeasType="Force" Minimum="-300" Precision="2" ShortNameTag="VertForce" SymbolTag="F" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1" IsDefaultMeas="1"/>
+        <Measurement ID="23" NameTag="VerticalForce" UnitType="lbs" Type="TwoInputCombo" Inputs="20,22" Params="0,1,1,0" Accuracy="1" Display="Digits" Internal="0" CanChangeSign="1" Maximum="1200" MeasType="Force" Minimum="-300" Precision="2" ShortNameTag="VertForce" SymbolTag="F" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1" IsDefaultMeas="1"/>
         <Measurement ID="24" NameTag="newtons1and2" Type="TwoInputCombo" Inputs="1,7" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
         <Measurement ID="25" NameTag="newtons3and4" Type="TwoInputCombo" Inputs="12,17" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
         <Measurement ID="26" NameTag="VerticalForce" UnitType="N" Type="TwoInputCombo" Inputs="24,25" Params="0,1,1,0" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="5400" MeasType="Force" Minimum="-1300" Precision="2" ShortNameTag="VertForce" SymbolTag="F" TypicalMax="2250" TypicalMin="0" VisibleSds="1" XplorerDefault="1" XplorerDisplay="1"/>
@@ -845,17 +857,17 @@
       </Sensor>
       <Sensor ID="226" Tag="ForcePlatform2D" Version="2.52" Class="0" DefaultRate="20Hz" FileName="2D_Force Platform.sds" FloatParams="0" Icon="0000000010081408fe3f140810081008381c1008fe7f02400a500a50f81f0000" IconID="226" Latency="500" MaxDatasheet="8192" MaxRate="2000Hz" Model="PS-2142" Warmup="20">
         <Measurement ID="0" NameTag="ScaledRawValue1" Type="LinearConv" Inputs="3" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="1" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="2" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="1" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
+        <Measurement ID="1" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="2" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="1" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="2" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="0" Params="6552.5,0,25622,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="1" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="3" NameTag="RawValue1" Type="RawDigital" DataSize="2" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
         <Measurement ID="6" NameTag="ScaledRawValue2" Type="LinearConv" Inputs="29" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="7" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="8" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="2" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
+        <Measurement ID="7" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="8" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="2" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="8" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="6" Params="6554,0,26127,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="2" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="11" NameTag="ScaledRawValue3" Type="LinearConv" Inputs="30" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="12" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="13" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="3" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
+        <Measurement ID="12" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="13" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="3" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="13" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="11" Params="6555.5,0,25728.5,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="3" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="16" NameTag="ScaledRawValue4" Type="LinearConv" Inputs="31" Params="0.5,0" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
-        <Measurement ID="17" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="18" Params="4.448,0" Accuracy="10" Display="None" Internal="0" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="4" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
+        <Measurement ID="17" NameTag="ForceBeamOrd" UnitType="N" Type="LinearConv" Inputs="18" Params="4.448,0" Accuracy="10" Display="None" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-350" Ordinal="4" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="250" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="18" NameTag="ForceBeamOrd" UnitType="lbs" Type="FactoryCal" Inputs="16" Params="6547.5,0,25982.5,224.9" Accuracy="0.01" Display="None" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-80" Ordinal="4" Precision="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" TypicalMax="100" TypicalMin="0" XplorerDisplay="1"/>
         <Measurement ID="19" NameTag="ScaledRawValue5" Type="LinearConv" Inputs="32" Params="0.5,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
         <Measurement ID="20" NameTag="pounds1and2" Type="TwoInputCombo" Inputs="2,8" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
@@ -864,7 +876,7 @@
         <Measurement ID="24" NameTag="newtons1and2" Type="TwoInputCombo" Inputs="1,7" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
         <Measurement ID="25" NameTag="newtons3and4" Type="TwoInputCombo" Inputs="12,17" Params="0,1,1,0" Accuracy="1" Display="None" Internal="1" Maximum="10" Minimum="-10" Precision="2" TypicalMax="10" TypicalMin="-10"/>
         <Measurement ID="26" NameTag="ForceNormal" UnitType="lbs" Type="TwoInputCombo" Inputs="20,22" Params="0,1,1,0" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="1200" MeasType="Force" Minimum="-300" Precision="2" ShortNameTag="ForceNormal_SN" SymbolTag="ForceNormal" TypicalMax="500" TypicalMin="0" XplorerDisplay="1"/>
-        <Measurement ID="27" NameTag="ParallelForce" UnitType="N" Type="LinearConv" Inputs="28" Params="4.448,0" Accuracy="10" Display="Digits" Internal="0" Maximum="1100" MeasType="Force" Minimum="-1100" Precision="2" ShortNameTag="ParallelF" SymbolTag="ForceParallel" TypicalMax="250" TypicalMin="-250" Visible="1" VisibleSds="1" XplorerDefault="1" XplorerDisplay="1"/>
+        <Measurement ID="27" NameTag="ParallelForce" UnitType="N" Type="LinearConv" Inputs="28" Params="4.448,0" Accuracy="10" Display="Digits" Internal="0" CanChangeSign="1" Maximum="1100" MeasType="Force" Minimum="-1100" Precision="2" ShortNameTag="ParallelF" SymbolTag="ForceParallel" TypicalMax="250" TypicalMin="-250" Visible="1" VisibleSds="1" XplorerDefault="1" XplorerDisplay="1"/>
         <Measurement ID="28" NameTag="ParallelForce" UnitType="lbs" Type="FactoryCal" Inputs="19" Params="6560.5,0,25792.5,224.9" Accuracy="0.01" Display="Digits" Internal="0" InternalUnit="1" Maximum="250" MeasType="Force" Minimum="-250" Precision="2" ShortNameTag="ParallelF" SymbolTag="ForceParallel" TypicalMax="50" TypicalMin="-50" XplorerDisplay="1"/>
         <Measurement ID="29" NameTag="RawValue2" Type="RawDigital" DataSize="2" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
         <Measurement ID="30" NameTag="RawValue3" Type="RawDigital" DataSize="2" Accuracy="0" Display="None" Internal="1" Maximum="14" Minimum="0" Precision="2" TypicalMax="14" TypicalMin="0"/>
@@ -902,9 +914,9 @@
       </Sensor>
       <Sensor ID="232" Tag="ChemistrySensor" Version="2.77" Class="0" DefaultRate="10Hz" FileName="Chemistry.sds" FloatParams="0" Icon="002000500a58ca50ae58ca508a888070000000678099819a8a981c97289040f0" IconID="232" Latency="45000" MaxDatasheet="8192" MaxRate="100Hz" Model="PS-2170" Warmup="20">
         <Measurement ID="0" NameTag="uncalPressure" Type="Direct" DataSize="4" Accuracy="2e-005" Display="Digits" Internal="1" Maximum="14" Minimum="0" Precision="5" TypicalMax="6" TypicalMin="0" XplorerDisplay="1"/>
-        <Measurement ID="1" NameTag="AbsolutePressure" UnitType="psi" Type="FactoryCal" Inputs="0" Params="5583.90039,14.81,17067.40234,54.81" Accuracy="0.1" Display="Digits" Internal="0" Maximum="100" MeasType="Pressure" Minimum="0" Precision="1" ShortNameTag="AbsPress" SymbolTag="pressureAbsolute" TypicalMax="20" TypicalMin="0" Visible="1" XplorerDisplay="1"/>
+        <Measurement ID="1" NameTag="AbsolutePressure" UnitType="psi" Type="FactoryCal" Inputs="0" Params="5583.90039,14.81,17067.40234,54.81" Accuracy="0.1" Display="Digits" Internal="0" Maximum="100" MeasType="Pressure" Minimum="0" Precision="1" ShortNameTag="AbsPress" SymbolTag="pressureAbsolute" TypicalMax="20" TypicalMin="0" Visible="1" XplorerDisplay="1" IsDefaultMeas="1"/>
         <Measurement ID="2" NameTag="AbsolutePressure" UnitType="Nm2" Type="LinearConv" Inputs="1" Params="6897.5,0" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="32767" MeasType="Pressure" Minimum="0" Precision="0" ShortNameTag="AbsPress" SymbolTag="pressureAbsolute" TypicalMax="32767" TypicalMin="0" XplorerDisplay="1"/>
-        <Measurement ID="3" NameTag="AbsolutePressure" UnitType="kPa" Type="LinearConv" Inputs="1" Params="6.89789,0" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="700" MeasType="Pressure" Minimum="0" Precision="0" ShortNameTag="AbsPress" SymbolTag="pressureAbsolute" TypicalMax="700" TypicalMin="0" VisibleSds="1" XplorerDisplay="1" IsDefaultMeas="1"/>
+        <Measurement ID="3" NameTag="AbsolutePressure" UnitType="kPa" Type="LinearConv" Inputs="1" Params="6.89789,0" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="700" MeasType="Pressure" Minimum="0" Precision="0" ShortNameTag="AbsPress" SymbolTag="pressureAbsolute" TypicalMax="700" TypicalMin="0" VisibleSds="1" XplorerDisplay="1"/>
         <Measurement ID="4" NameTag="uncalTemperature" UnitType="DegC" Type="Direct" DataSize="4" Accuracy="1" Display="Digits" Internal="1" Maximum="408" Minimum="238" Precision="1" TypicalMax="373" TypicalMin="273" XplorerDisplay="1"/>
         <Measurement ID="5" NameTag="Temperature" UnitType="DegC" Type="UserCal" Inputs="4" Params="0,0,100,100" CalFlags="1,1,1,1" Accuracy="1" Display="Digits" Internal="0" Maximum="135" MeasType="Temperature" Minimum="-35" Precision="1" ShortNameTag="Temp" SymbolTag="T" TypicalMax="30" TypicalMin="15" Visible="1" XplorerDisplay="1"/>
         <Measurement ID="6" NameTag="Temperature" UnitType="DegF" Type="LinearConv" Inputs="5" Params="1.8,32" Accuracy="1" Display="Digits" Internal="0" InternalUnit="1" Maximum="275" MeasType="Temperature" Minimum="-31" Precision="1" ShortNameTag="Temp" SymbolTag="T" TypicalMax="275" TypicalMin="-31" XplorerDisplay="1"/>
@@ -1072,7 +1084,7 @@
         <SupportedCmd ID="65" Size="4"/>
       </Sensor>
       <Sensor ID="251" Tag="EthanolSensor" Version="2.2" Class="0" DefaultRate="5Hz" FileName="Ethanol.sds" FloatParams="0" Icon="000010002660fc3fd818b00d6006c00380018001800180018001f81f00000000" IconID="251" Latency="100" MaxDatasheet="8192" MaxRate="1000Hz" Model="PS-2194" Warmup="1">
-        <Measurement ID="0" NameTag="SensorResistance" UnitType="ohm" Type="Direct" DataSize="4" Accuracy="2" Display="Digits" Internal="0" Maximum="2000" MeasType="Resistance" Minimum="0" Precision="0" ShortNameTag="SensorR" SymbolTag="R" TypicalMax="15" TypicalMin="0" Visible="1"/>
+        <Measurement ID="0" NameTag="SensorResistance" UnitType="kohm" DefaultUnit="kohm" Type="Direct" DataSize="4" Accuracy="2" Display="Digits" Internal="0" Maximum="2000" MeasType="Resistance" Minimum="0" Precision="0" ShortNameTag="SensorR" SymbolTag="R" TypicalMax="15" TypicalMin="0" Visible="1"/>
         <Measurement ID="1" NameTag="PercentEthanol" UnitType="percent" Type="Direct" DataSize="4" Accuracy="1" Display="Digits" Internal="0" Maximum="4" MeasType="Concentration" Minimum="0" Precision="2" ShortNameTag="percentEth" SymbolTag="percentEth" TypicalMax="5" TypicalMin="0" Visible="1" VisibleSds="1" XplorerDefault="1" XplorerDisplay="1" IsDefaultMeas="1"/>
       </Sensor>
       <Sensor ID="252" Tag="NonContactTemperatureSensor" Version="2.4" Class="0" DefaultRate="20Hz" FileName="NonContactTemperature.sds" FloatParams="0" Icon="00003078304808584348f7584748f7584748f7584348084830fc30fc00fc0000" IconID="252" Latency="100" ListNameTag="TemperatureSensorNonContact" MaxDatasheet="8192" MaxRate="200Hz" Model="PS-2197" Warmup="1">
@@ -1398,8 +1410,8 @@
       </Sensor>
       <Sensor ID="2020" Tag="WirelessTemperatureSensor" DefaultRate="2Hz" IconID="136" MaxRate="10Hz" Model="PS-3201">
         <Measurement ID="0" NameTag="RawTemperature" Type="RawDigital" DataSize="2" Internal="1"/>
-        <Measurement ID="1" NameTag="Temperature" UnitType="DegC" Type="UserCal" Inputs="2" Params="0,0,100,100" CalFlags="1,1,1,1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1"/>
-        <Measurement ID="2" NameTag="UncalTemperature" UnitType="DegC" Type="LinearConv" Inputs="0" Params="0.00268127,-46.85" Internal="1" MeasType="Temperature"/>
+		<Measurement ID="1" NameTag="Temperature" UnitType="DegC" Type="UserCal" Inputs="2" Params="0,0,100,100" CalFlags="1,1,1,1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1"/>
+		<Measurement ID="2" NameTag="UncalTemperature" UnitType="DegC" Type="LinearConv" Inputs="0" Params="0.00268127,-46.85" Internal="1" MeasType="Temperature"/>
       </Sensor>
       <Sensor ID="2021" Tag="WirelessPHSensor" DefaultRate="5Hz" IconID="139" MaxRate="50Hz" Model="PS-3204">
         <Measurement ID="0" NameTag="adc" Type="RawDigital" DataSize="2" Internal="1"/>
@@ -1469,7 +1481,7 @@
         <Measurement ID="2" NameTag="Z" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
         <Measurement ID="3" NameTag="AngularVelocityx" UnitType="degps" Type="FactoryCal" Inputs="0" Params="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvelx" SymbolTag="omegaLx" Visible="1"/>
         <Measurement ID="4" NameTag="AngularVelocityy" UnitType="degps" Type="FactoryCal" Inputs="1" Params="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvely" SymbolTag="omegaLy" Visible="1"/>
-        <Measurement ID="5" NameTag="AngularVelocityz" UnitType="degps" Type="FactoryCal" Inputs="2" Params="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvelz" SymbolTag="omegaLz" Visible="1"/>
+        <Measurement ID="5" NameTag="AngularVelocityz" UnitType="degps" Type="FactoryCal" Inputs="2" Paramsx="0,0,1,0.00875" Accuracy="0.01" Maximum="10" MeasType="AngularVelocity" Minimum="-10" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="1" ShortNameTag="angvelz" SymbolTag="omegaLz" Visible="1"/>
       </Sensor>
       <Sensor ID="2030" Tag="WirelessLightSensor1" DefaultRate="1Hz" IconID="132" MaxRate="2Hz" Model="PS-3213">
         <Measurement ID="0" NameTag="R" UnitType="percent" Type="LinearConv" Inputs="9" Params="0.0015258,0" Internal="1" MeasType="LightIntensity" Precision="1" Minimum="0" Maximum="100" Visible="1" SymbolTag="r"/>
@@ -1553,9 +1565,9 @@
         <Measurement ID="11" NameTag="RawWindSpeed" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
       </Sensor>
       <Sensor ID="2038" Tag="WirelessGPSSensor" DefaultRate="1Hz" IconID="2038" MaxRate="1Hz" Model="PS-3209" NoDefaultMeas="1">
-        <Measurement ID="0" NameTag="RawLatitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="0" Visible="1"/>
-        <Measurement ID="1" NameTag="RawLongitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="0" Visible="1"/>
-        <Measurement ID="2" NameTag="RawAltitude" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="0" Visible="1"/>
+        <Measurement ID="0" NameTag="RawLatitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="1"/>
+        <Measurement ID="1" NameTag="RawLongitude" UnitType="Unitless" Type="RawDigital" DataSize="4" Internal="1"/>
+        <Measurement ID="2" NameTag="RawAltitude" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="3" NameTag="RawSpeed" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="4" NameTag="SatelliteCount" UnitType="Unitless" Type="RawDigital" MeasType="Count" ShortNameTag="SatCount" SymbolTag="Count" Precision="0" DataSize="1" Visible="1"/>
         <Measurement ID="5" NameTag="Latitude" UnitType="deg" UnitGroup="GPS" Equation="[0]*0.000001" MeasType="Latitude" ShortNameTag="Lat" SymbolTag="Lat" DefaultUnit="deg" Precision="5" Minimum="-90" Maximum="90" TypicalMin="-70" TypicalMax="70" Visible="1" IsDefaultMeas="1"/>
@@ -1596,6 +1608,7 @@
         <Measurement ID="16" NameTag="Orange600nmTransmittance" UnitType="percent" Type="UserCal" Inputs="1" Params="0,0,10000,100" CalFlags="0,0,1,1" Accuracy="1" Maximum="100" MeasType="Transmittance" Minimum="0" Precision="1" ShortNameTag="Orange600nmTransmit" SymbolTag="TOrange" Visible="1" PreferredColor="0xFFFF7F00"/>
         <Measurement ID="17" NameTag="Red650nmTransmittance" UnitType="percent" Type="UserCal" Inputs="0" Params="0,0,10000,100" CalFlags="0,0,1,1" Accuracy="1" Maximum="100" MeasType="Transmittance" Minimum="0" Precision="1" ShortNameTag="Red650nmTransmit" SymbolTag="TRed" Visible="1" PreferredColor="0xFFFF0000" IsDefaultMeas="1"/>
         <Measurement ID="21" NameTag="Ammonia" UnitType="mgpL" Equation="table([10],0,-0.117,0.617,1.56,2,8.13)" Accuracy="0.05" Maximum="3" MeasType="Concentration" Minimum="1" Precision="1" ShortNameTag="NH3" SymbolTag="NH3" TypicalMax="3" TypicalMin="1" Visible="1"/>
+        <Measurement ID="23" NameTag="Chlorine" UnitType="mgpL" Equation="([7]*8.56)-0.197" Accuracy="0.05" Maximum="5" MeasType="Concentration" Minimum="1" Precision="1" ShortNameTag="ChlorineSN" SymbolTag="Cl" TypicalMax="3" TypicalMin="1" Visible="1"/>
         <Measurement ID="24" NameTag="Iron" UnitType="mgpL" Equation="table([8],0,0.0641,0.833,5.85,2,101.6)" Accuracy="0.05" Maximum="7" MeasType="Concentration" Minimum="0" Precision="1" ShortNameTag="Fe" SymbolTag="Fe" TypicalMax="7" TypicalMin="0" Visible="1"/>
         <Measurement ID="26" NameTag="Phosphate" UnitType="mgpL" Equation="table([11],0,-0.017,0.647,5.33,2,42.4)" Accuracy="0.05" Maximum="8" MeasType="Concentration" Minimum="1" Precision="1" ShortNameTag="PO4" SymbolTag="PO4" TypicalMax="8" TypicalMin="1" Visible="1"/>
         <Measurement ID="29" NameTag="Nitrate" UnitType="mgpL" Equation="table([6],0,-0.196,1.93,7.04,3,30.5)" Accuracy="0.05" Maximum="2" MeasType="Concentration" Minimum="1" Precision="2" ShortNameTag="NO3" SymbolTag="NO3" TypicalMax="2" TypicalMin="1" Visible="1"/>
@@ -1770,13 +1783,12 @@
         <Measurement ID="0" NameTag="RawWaveVoltage" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="1" NameTag="Voltage" UnitType="V" Type="FactoryCal" Inputs="0" Params="0,32768,3,65535" Accuracy="0.005" Maximum="3" MeasType="Voltage" Minimum="-3" TypicalMin="-1" TypicalMax="1" OffsetZero="1" Precision="3" ShortNameTag="Volt" SymbolTag="V" Visible="1"/>
       </Sensor>
-      <Sensor ID="2061" Tag="WirelessLightSensorA" DefaultRate="1Hz" IconID="132" MaxRate="2Hz" Model="PS-3213A">
+      <Sensor ID="2061" Tag="WirelessLightSensor1" DefaultRate="1Hz" IconID="132" MaxRate="2Hz" Model="PS-3213A">
         <Measurement ID="0" NameTag="R" UnitType="percent" Type="LinearConv" Inputs="9" Params="0.0015258,0" Internal="1" MeasType="LightIntensity" Precision="1" Minimum="0" Maximum="100" Visible="1" SymbolTag="r"/>
         <Measurement ID="1" NameTag="G" UnitType="percent" Type="LinearConv" Inputs="10" Params="0.0015258,0" Internal="1" MeasType="LightIntensity" Precision="1" Minimum="0" Maximum="100" Visible="1" SymbolTag="g"/>
         <Measurement ID="2" NameTag="B" UnitType="percent" Type="LinearConv" Inputs="11" Params="0.0015258,0" Internal="1" MeasType="LightIntensity" Precision="1" Minimum="0" Maximum="100" Visible="1" SymbolTag="b"/>
         <Measurement ID="3" NameTag="IR" UnitType="percent" Type="LinearConv" Inputs="12" Params="0.0015258,0" Internal="1" MeasType="LightIntensity" Precision="1" Minimum="0" Maximum="100" Visible="1" SymbolTag="ir"/>
-        <Measurement ID="6" NameTag="UVIndexAdj" UnitType="Unitless" Equation="(5.68e-6*[19]*[19])+(1.13e-3*[19])+5.03e-2" Visible="1"/>
-        <Measurement ID="7" NameTag="UVIndex" UnitType="Unitless" Type="UserCal" Inputs="19" Params="0,0,1,1" CalFlags="0,0,1,1" MeasType="UVIndex" Visible="1" SymbolTag="UVi"/>
+        <Measurement ID="7" NameTag="UVIndex" UnitType="Unitless" Type="UserCal" Inputs="15" Params="0,0,1,1" CalFlags="0,0,1,1" MeasType="UVIndex" Visible="1" SymbolTag="UVi"/>
         <Measurement ID="8" NameTag="Illuminance" UnitType="lux" Type="LinearConv" Inputs="16" Params="2,0" MeasType="LightIntensity" Minimum="0" Maximum="50000" Visible="1" SymbolTag="Illum" IsDefaultMeas="1"/>
         <Measurement ID="9" NameTag="R" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="10" NameTag="G" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
@@ -1786,7 +1798,6 @@
         <Measurement ID="16" NameTag="LuxCal" Type="FactoryCal" Inputs="10" Params="0,0,1,1" Internal="1"/>
         <Measurement ID="17" NameTag="SolarIrradiance" UnitType="wpm2" Type="LinearConv" Inputs="8" Params="0.0104,0" MeasType="LightIntensity" Minimum="0" Maximum="500" Visible="1" ShortNameTag="IrradianceSN" SymbolTag="Irrad"/>
         <Measurement ID="18" NameTag="SolarPAR" UnitType="umolpm2ps" Type="LinearConv" Inputs="8" Params="0.0185,0" MeasType="PAR" Minimum="0" Maximum="1000" Visible="1" ShortNameTag="PAR" SymbolTag="PAR"/>
-        <Measurement ID="19" NameTag="UVIndexFCal" UnitType="Unitless" Type="FactoryCal" Inputs="15" Params="0,0,1,1" Visible="1"/>
       </Sensor>
       <Sensor ID="2062" Tag="WirelessSoundWaveSensor" DefaultRate="1000Hz" IconID="2062" MaxBurstRate="100000Hz" MaxRate="2000Hz" Model="PS-3227" SupportsTrigger="1" SupportsZeroOnStart="1" MaxBurstSamples="500">
         <Measurement ID="0" NameTag="RawSoundWave" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
@@ -1817,9 +1828,9 @@
         <Measurement ID="1" NameTag="VWCLoamRaw" UnitType="Unitless" Equation="table([0],7122,45,14100,20,17245,15,51725,0)" MeasType="PercentVWC" Internal="1"/>
         <Measurement ID="2" NameTag="VWCSandRaw" UnitType="Unitless" Equation="table([0],6344,35,11964,15,50689,0)" MeasType="PercentVWC" Internal="1"/>
         <Measurement ID="3" NameTag="VWCClayRaw" UnitType="Unitless" Equation="table([0],6499,45,11234,25,19999,15,52875,0)" MeasType="PercentVWC" Internal="1"/>
-        <Measurement ID="4" NameTag="VWCLoam" UnitType="percent" Type="UserCal" Inputs="1" Params="0,0,45,45" CalFlags="1,1,1,1" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
-        <Measurement ID="5" NameTag="VWCSand" UnitType="percent" Type="UserCal" Inputs="2" Params="0,0,35,35" CalFlags="1,1,1,1" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
-        <Measurement ID="6" NameTag="VWCClay" UnitType="percent" Type="UserCal" Inputs="3" Params="0,0,45,45" CalFlags="1,1,1,1" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+        <Measurement ID="4" NameTag="VWCLoam" UnitType="percent" Type="UserCal" Inputs="1" Params="0,0,45,45" CalFlags="1,1,1,1" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+        <Measurement ID="5" NameTag="VWCSand" UnitType="percent" Type="UserCal" Inputs="2" Params="0,0,35,35" CalFlags="1,1,1,1" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+        <Measurement ID="6" NameTag="VWCClay" UnitType="percent" Type="UserCal" Inputs="3" Params="0,0,45,45" CalFlags="1,1,1,1" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
         <Measurementx ID="10" NameTag="GWCCalc" UnitType="percent" Equation="table([0],10747,-0.00186,100,31979,-0.000938,90.1,42332,-0.00193,121.8,55046,-0.00157,106.6,65535,-0.00191,125)" Accuracy="1" Maximum="100" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
       </Sensor>
       <Sensor ID="2066" Tag="CodeNodeTempLightSound" DefaultRate="20Hz" IconID="136" MaxRate="100Hz" Model="PS-3231">
@@ -1864,11 +1875,13 @@
         <Measurement ID="4" NameTag="AngularVelocityOrd" UnitType="radps" DefaultUnit="degps" Type="Derivative" Inputs="2" Params="3" Ordinal = "1" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
         <Measurement ID="5" NameTag="AngularVelocityOrd" UnitType="radps" DefaultUnit="degps" Type="Derivative" Inputs="3" Params="3" Ordinal = "2" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
       </Sensor>
-      <Sensor ID="2071" Tag="Spirometer" DefaultRate="50Hz" IconID="2071" MaxRate="1000Hz" Model="PS-3234">
+      <Sensor ID="2071" Tag="WirelessSpirometer" DefaultRate="50Hz" IconID="2071" MaxRate="1000Hz" Model="PS-3234">
         <Measurement ID="0" NameTag="RawFlowRate" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
-        <Measurement ID="1" NameTag="FlowRate" UnitType="Lps" Equation="[0]/1000.0" Minimum="0" Maximum="30" TypicalMin="0" TypicalMax="30" Visible="1"/>
-        <Measurement ID="2" NameTag="TotalFlow" UnitType="L" Equation="integral([1])" Minimum="0" Maximum="10" TypicalMin="0" TypicalMax="10" Visible="1"/>
-        <Measurement ID="3" NameTag="MaxFlow" UnitType="Lps" Equation="max([1])" Minimum="0" Maximum="10" TypicalMin="3" TypicalMax="6" Visible="1"/>
+        <Measurement ID="1" NameTag="VolumetricFlowRate" UnitType="Lps" Equation="[0]/1000.0" MeasType="VolumeFlowRate" Minimum="0" Maximum="30" ShortNameTag="VoluFlowRate" SymbolTag="flowRateVolume" TypicalMin="0" TypicalMax="30" Visible="1"/>
+        <Measurement ID="2" NameTag="TotalFlowVolume" UnitType="L" Equation="integral([1])" MeasType="FlowVolume" Minimum="0" Maximum="10" ShortNameTag="TotFlowVol" SymbolTag="totFloVol" TypicalMin="0" TypicalMax="10" Visible="1"/>
+        <Measurement ID="3" NameTag="MaxFlowRate" UnitType="Lps" Equation="max([1])" MeasType="VolumeFlowRate" Minimum="0" Maximum="10" ShortNameTag="MaxFlow" SymbolTag="Rmax" TypicalMin="3" TypicalMax="6" Visible="1"/>
+        <Measurement ID="4" NameTag="PerBreathVolume" UnitType="L" Equation="perbreathvolume([1],[2],3)" MeasType="FlowVolume" Minimum="0" Maximum="10" ShortNameTag="PerBreathVol" SymbolTag="perBreathV" TypicalMin="0" TypicalMax="3" Visible="1"/>
+        <Measurement ID="5" NameTag="LungVolume" UnitType="L" Equation="2.5-[2]" MeasType="FlowVolume" Minimum="0" Maximum="10" ShortNameTag="LungVol" SymbolTag="lungV" TypicalMin="0" TypicalMax="6" Visible="1" IsDefaultMeas="1"/>
         <Measurementx ID="10" NameTag="RawPressure" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
       </Sensor>
       <Sensor ID="2072" Tag="WirelessPowerMeter" DefaultRate="20Hz" IconID="208" MaxRate="100Hz" Model="XX-XXXX">
@@ -1884,103 +1897,151 @@
         <Measurement ID="1" NameTag="Intensity" UnitType="Unitless" Type="RawDigital" DataSize="2" Accuracy="1" Maximum="1000" MeasType="Intensity" Minimum="0" Precision="0" Visible="1"/>
         <Measurement ID="2" NameTag="Angle" UnitType="deg" Type="LinearConv" Inputs="0" Params="0.09,0" Accuracy="0.1" DefaultUnit="deg" Display="Graph" Maximum="360" MeasType="Angle" Minimum="0" Precision="1" Visible="1"/>
       </Sensor>
-      <Sensor ID="2074" Tag="EKGVoltage" DefaultRate="200Hz" IconID="147" MaxRate="500Hz" MinRate="50Hz" Model="PS-3236">
+      <Sensor ID="2074" Tag="EKGVoltage" DefaultRate="200Hz" IconID="147" MaxRate="1000Hz" MinRate="50Hz" Model="PS-3236">
         <Measurement ID="0" NameTag="RawVoltage" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
-        <Measurement ID="1" NameTag="Voltage" UnitType="mV" Equation="([0]-28500)*0.000065" Accuracy="0.005" DefaultUnit="mV" Maximum="3" MeasType="Voltage" Minimum="-3" Precision="3" ShortNameTag="Volt" SymbolTag="V" Visible="1"/>
+        <Measurement ID="1" NameTag="Voltage" UnitType="mV" Equation="smooth((([0]-28500)*0.000065),17)" Accuracy="0.005" DefaultUnit="mV" Maximum="3" MeasType="Voltage" Minimum="-3" Precision="3" ShortNameTag="Volt" SymbolTag="V" Visible="1"/>
       </Sensor>
       <Sensor ID="2075" Tag="EKGHeartRate" DefaultRate="1s" IconID="147" MaxRate="1s" Model="PS-3236">
         <Measurement ID="0" NameTag="RawHeartRate" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="1" NameTag="HeartRate" UnitType="BeatsPerMin" Equation="ekgbeat(timestamp([0],0.0001),[100])" Accuracy="1" Maximum="250" MeasType="HeartRate" Minimum="30" Precision="0" ShortNameTag="HeartRt" SymbolTag="HR" TypicalMax="120" TypicalMin="50" Visible="1"/>
         <Measurement ID="100" NameTag="HeartRateAveraging" UnitType="Unitless" Type="Constant" Internal="1" Value="0" Description="DescHeartRateAveraging" Values="NoAveraging:0:FiveSecondAvg:5"/>
       </Sensor>
-      <Sensor ID="2076" Tag="ForcePlatform" DefaultRate="20Hz" IconID="225" MaxRate="10000Hz" SupportsZeroOnStart="1" ZeroOnStart="0" SupportsTrigger="1" MaxBurstSamples="8190" Model="PS-3229">
-        <Measurement ID="0" NameTag="RawForce1" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="1" NameTag="RawForce2" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="2" NameTag="RawForce3" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="3" NameTag="RawForce4" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="5" NameTag="Force1" UnitType="N" Type="FactoryCal" Inputs="0" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="6" NameTag="Force2" UnitType="N" Type="FactoryCal" Inputs="1" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="7" NameTag="Force3" UnitType="N" Type="FactoryCal" Inputs="2" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="8" NameTag="Force4" UnitType="N" Type="FactoryCal" Inputs="3" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="10" NameTag="ForceR1" UnitType="N" Equation="[5]+[6]+[7]+[8]" MeasType="Force" SupportsTrigger="1" Visible="1"/>
+      <Sensor ID="2076" Tag="WirelessForcePlatform" DefaultRate="20Hz" IconID="225" MaxRate="10000Hz" SupportsZeroOnStart="1" ZeroOnStart="0" SupportsTrigger="1" MaxBurstSamples="8190" Model="PS-3229">
+        <Measurement ID="0" NameTag="RawForce1" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="1" NameTag="RawForce2" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="2" NameTag="RawForce3" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="3" NameTag="RawForce4" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="5" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="0" Params="32768,0,1000,100" MeasType="Force" Ordinal="1" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="6" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="1" Params="32768,0,1000,100" MeasType="Force" Ordinal="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="7" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="2" Params="32768,0,1000,100" MeasType="Force" Ordinal="3" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="8" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="3" Params="32768,0,1000,100" MeasType="Force" Ordinal="4" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="10" NameTag="ForceNormal" UnitType="N" Equation="[5]+[6]+[7]+[8]" MeasType="Force" ShortNameTag="ForceNormal_SN" SymbolTag="ForceNormal" SupportsTrigger="1" Minimum="-1100" Maximum="4400" TypicalMin="0" TypicalMax="800" Visible="1" IsDefaultMeas="1"/>
       </Sensor>
-      <Sensor ID="2077" Tag="ForcePlatform2D" DefaultRate="20Hz" IconID="226" MaxRate="10000Hz" SupportsZeroOnStart="1" ZeroOnStart="0" SupportsTrigger="1" MaxBurstSamples="6550" Model="PS-3230">
-        <Measurement ID="0" NameTag="RawForce1" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="1" NameTag="RawForce2" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="2" NameTag="RawForce3" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="3" NameTag="RawForce4" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="4" NameTag="RawForce5" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
-        <Measurement ID="5" NameTag="Force1" UnitType="N" Type="FactoryCal" Inputs="0" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="6" NameTag="Force2" UnitType="N" Type="FactoryCal" Inputs="1" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="7" NameTag="Force3" UnitType="N" Type="FactoryCal" Inputs="2" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="8" NameTag="Force4" UnitType="N" Type="FactoryCal" Inputs="3" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="9" NameTag="Force5" UnitType="N" Type="FactoryCal" Inputs="4" Params="32768,0,1000,100" MeasType="Force" OffsetZero="1" SupportsTrigger="1" Visible="1"/>
-        <Measurement ID="10" NameTag="ForceR1" UnitType="N" Equation="[5]+[6]+[7]+[8]" MeasType="Force" SupportsTrigger="1" Visible="1"/>
+      <Sensor ID="2077" Tag="WirelessForcePlatform2D" DefaultRate="20Hz" IconID="226" MaxRate="10000Hz" SupportsZeroOnStart="1" ZeroOnStart="0" SupportsTrigger="1" MaxBurstSamples="6550" Model="PS-3230">
+        <Measurement ID="0" NameTag="RawForce1" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="1" NameTag="RawForce2" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="2" NameTag="RawForce3" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="3" NameTag="RawForce4" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="4" NameTag="RawForce5" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="5" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="0" Params="32768,0,1000,100" MeasType="Force" Ordinal="1" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="6" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="1" Params="32768,0,1000,100" MeasType="Force" Ordinal="2" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="7" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="2" Params="32768,0,1000,100" MeasType="Force" Ordinal="3" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="8" NameTag="ForceBeamOrd" UnitType="N" Type="FactoryCal" Inputs="3" Params="32768,0,1000,100" MeasType="Force" Ordinal="4" ShortNameTag="ForceOrd" SymbolTag="FOrd" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-275" Maximum="1100" TypicalMin="0" TypicalMax="200" Visible="1"/>
+        <Measurement ID="9" NameTag="ParallelForce" UnitType="N" Type="FactoryCal" Inputs="4" Params="32768,0,1000,100" MeasType="Force" ShortNameTag="ParallelF" SymbolTag="ForceParallel" OffsetZero="1" SupportsTrigger="1" CanChangeSign="1" Minimum="-1100" Maximum="1100" TypicalMin="-200" TypicalMax="200" Visible="1"/>
+        <Measurement ID="10" NameTag="ForceNormal" UnitType="N" Equation="[5]+[6]+[7]+[8]" MeasType="Force" ShortNameTag="ForceNormal_SN" SymbolTag="ForceNormal" SupportsTrigger="1" Minimum="-1100" Maximum="4400" TypicalMin="0" TypicalMax="800" Visible="1" IsDefaultMeas="1"/>
       </Sensor>
-       <Sensor ID="2079" Tag="GeigerCounter" DefaultRate="1Hz" IconID="424" MaxRate="10Hz" Model="PS-3238">
-        <Measurement ID="0" NameTag="GeigerCounts" UnitType="CountsPerSample" Type="RawDigital" DataSize="2" MeasType="CountsPerSample" Precision="0" ShortNameTag="Ctssample" SymbolTag="R" Visible="1"/>
-        <Measurement ID="1" NameTag="Voltage" UnitType="V" Type="RawDigital" DataSize="2" Accuracy="1" Minimum="450" Maximum="600" MeasType="Voltage" Precision="0" ShortNameTag="Volt" SymbolTag="V" Visible="1"/>
+       <Sensor ID="2079" Tag="WirelessGM" DefaultRate="30s" IconID="424" MaxRate="10Hz" MinRate="3600s" Model="PS-3238" FirstSampleAtT1="1">
+        <Measurement ID="0" NameTag="CountRate" UnitType="CountsPerSample" Type="RawDigital" DataSize="2" MeasType="CountsPerSample" Precision="0" Minimum="0" Maximum="100" ShortNameTag="CountRate_SN" SymbolTag="R" Visible="1"/>
+        <Measurement ID="1" NameTag="TubeVoltage" UnitType="V" Type="RawDigital" DataSize="2" Accuracy="1" Minimum="450" Maximum="600" MeasType="Voltage" Precision="0" ShortNameTag="TubeVolt" SymbolTag="V" Visible="1"/>
+        <!--Debug--><Measurementx ID="100" NameTag="VoltageMode" UnitType="Unitless" Type="Constant" Internal="1" MeasType="None" Value="1" Values="Normal:1:RawPot:2" IsRange="1"/>
       </Sensor>
-      <Sensor ID="2080" Tag="MeltTempTemperature" DefaultRate="15s" IconID="136" MaxRate="5s" Model="PS-3239">
-        <Measurement ID="0" NameTag="RawTemperature" UnitType="DegC" Type="RawDigital" DataSize="2" MeasType="Temperature" Precision="0" Visible="1"/>
+      <Sensor ID="2080" Tag="WirelessMeltTempSensor" DefaultRate="2Hz" IconID="136" MaxRate="10Hz" Model="PS-3239">
+        <Measurement ID="0" NameTag="RawTemperature" UnitType="Unitless" Type="RawDigital" DataSize="2" MeasType="Temperature" Precision="0" Internal="1"/>
+        <Measurement ID="1" NameTag="Temperature" UnitType="DegC" Equation="[0]*0.01" MeasType="Temperature" ShortNameTag="Temp" SymbolTag="T" Precision="2" Minimum="0" Maximum="350" TypicalMin="20" TypicalMax="200" Visible="1"/>
+        <!--Debug--><Measurementx ID="2" NameTag="RawBoardTemperature" UnitType="Unitless" Type="RawDigital" DataSize="2" MeasType="None" Precision="0" Visible="1"/>
+        <!--Debug--><Measurementx ID="3" NameTag="BoardTemperature" UnitType="DegC" Equation="([2]*0.002670329)-49" MeasType="Temperature" Precision="2" Visible="1"/>
+        <!--Debug--><Measurementx ID="4" NameTag="rawTargetTemperature" UnitType="DegC" Type="RawDigital" DataSize="2" Visible="1"/>
+        <!--Debug--><Measurementx ID="5" NameTag="TargetTemperature" UnitType="DegC" Equation="[4]*0.01" MeasType="Temperature" Precision="2" Visible="1"/>
+        <!--Debug--><Measurementx ID="6" NameTag="adcTemperature" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
+        <!--Debug--><Measurementx ID="7" NameTag="RawHeaterPercent" UnitType="Unitless" Type="RawDigital" DataSize="2" Visible="1"/>
+        <!--Debug--><Measurementx ID="8" NameTag="HeaterPercent" UnitType="percent" Equation="[7]/100" DataSize="2" Visible="1"/>
+        <!--Debug--><Measurementx ID="100" NameTag="Debug" UnitType="Unitless" Type="Constant" Internal="1" MeasType="None" Value="2" Values="Off:1:On:2" IsRange="1"/>
       </Sensor>
-      <Sensor ID="2081" Tag="MeltTempImage" DefaultRate="15s" IconID="136" MaxRate="5s" IsImage="1" Model="PS-3239">
-      </Sensor>
-      <Sensor ID="2082" Tag="ControlNodeAcceleration" DefaultRate="20Hz" IconID="208" MaxRate="50Hz" SupportsZeroOnStart="1" Model="PS-3232">
-        <Measurement ID="0" NameTag="RawX" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Visible="1"/>
-        <Measurement ID="1" NameTag="RawY" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Visible="1"/>
-        <Measurement ID="2" NameTag="RawZ" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Visible="1"/>
+      <Sensor ID="2082" Tag="ControlNodeOnboardSensor" DefaultRate="20Hz" IconID="2082" MaxRate="50Hz" SupportsZeroOnStart="1" Model="PS-3232">
+        <Measurement ID="0" NameTag="RawX" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
+        <Measurement ID="1" NameTag="RawY" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
+        <Measurement ID="2" NameTag="RawZ" UnitType="Unitless" Type="RawDigital" DataSize="2" TwosComp="1" Internal="1"/>
         <Measurement ID="3" NameTag="Accelerationx" UnitType="ms2" Equation="[9]" CanChangeSign="1" OffsetZero="1" Accuracy="0.01" Maximum="10" TypicalMin="-1" TypicalMax="1" MeasType="Acceleration" ShortNameTag="accx" SymbolTag="ax" Minimum="-10" Precision="1" Visible="1"/>
         <Measurement ID="4" NameTag="Accelerationy" UnitType="ms2" Equation="[10]" CanChangeSign="1" OffsetZero="1" Accuracy="0.01" Maximum="10" TypicalMin="-1" TypicalMax="1" MeasType="Acceleration" ShortNameTag="accy" SymbolTag="ay" Minimum="-10" Precision="1" Visible="1"/>
         <Measurement ID="5" NameTag="Accelerationz" UnitType="ms2" Equation="[11]" CanChangeSign="1" OffsetZero="1" Accuracy="0.01" Maximum="10" TypicalMin="-1" TypicalMax="1" MeasType="Acceleration" ShortNameTag="accz" SymbolTag="az" Minimum="-10" Precision="1" Visible="1"/>
         <Measurement ID="9" NameTag="FCalMotionX" UnitType="ms2" Type="FactoryCal" Inputs="0" Params="0,0,1,0.002394" Internal="1"/>
         <Measurement ID="10" NameTag="FCalMotionY" UnitType="ms2" Type="FactoryCal" Inputs="1" Params="0,0,1,0.002394" Internal="1"/>
         <Measurement ID="11" NameTag="FCalMotionZ" UnitType="ms2" Type="FactoryCal" Inputs="2" Params="0,0,1,0.002394" Internal="1"/>
+        <Measurement ID="12" NameTag="RawServoResistance1" UnitType="Unitless" Type="RawDigital" DataSize="1" Internal="1"/>
+        <Measurement ID="13" NameTag="RawServoResistance2" UnitType="Unitless" Type="RawDigital" DataSize="1" Internal="1"/>
+        <Measurement ID="14" NameTag="ServoCurrentOrd" UnitType="percent" Equation="[12]*12.5" Accuracy="10" Maximum="100" MeasType="None" Minimum="0" Precision="0" Ordinal="1" ShortNameTag="CurrOrd" SymbolTag="IOrd" Visible="1"/>
+        <Measurement ID="15" NameTag="ServoCurrentOrd" UnitType="percent" Equation="[13]*12.5" Accuracy="10" Maximum="100" MeasType="None" Minimum="0" Precision="0" Ordinal="2" ShortNameTag="CurrOrd" SymbolTag="IOrd" Visible="1"/>
 	  </Sensor>
       <Sensor ID="2083" Tag="WirelessCOSensor" DefaultRate="1Hz" IconID="1066" MaxRate="10Hz" Model="PS-3242">
         <Measurement ID="0" NameTag="RawCO" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="1" NameTag="RawTemp" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="2" NameTag="RawHumidity" Type="RawDigital" DataSize="2" Internal="1"/>
-        <Measurement ID="3" NameTag="COConcentration" UnitType="ppm" Type="UserCal" Inputs="0" Params="8820,0,38000,1000" CalFlags="1,1,1,1" MeasType="Concentration" Precision="1" Minimum="0" Maximum="100" TypicalMin="75" TypicalMax="100" ShortNameTag="O2Conc" SymbolTag="O2" Visible="1" IsDefaultMeas="1"/>
+        <Measurement ID="3" NameTag="COConcentration" UnitType="ppm" Type="UserCal" Inputs="0" Params="8820,0,38000,1000" CalFlags="1,1,1,1" MeasType="Concentration" Precision="1" Minimum="0" Maximum="100" TypicalMin="75" TypicalMax="100" ShortNameTag="COConc" SymbolTag="CO" Visible="1" IsDefaultMeas="1"/>
         <Measurement ID="4" NameTag="Temperature" UnitType="DegC" Equation="(([1]/65536)*165)-40" MeasType="Temperature" Precision="1" ShortNameTag="Temp" SymbolTag="T" Minimum="0" Maximum="100" TypicalMin="15" TypicalMax="30" Visible="1"/>
         <Measurement ID="5" NameTag="RelativeHumidity" UnitType="percent" Equation="([2]/65536)*100" MeasType="Humidity" ShortNameTag="RelHumid" SymbolTag="RH" Precision="1" Minimum="0" Maximum="100" TypicalMin="15" TypicalMax="85" Visible="1"/>
         <Measurement ID="6" NameTag="AbsoluteHumidity" UnitType="gpm3" Equation="((13.24*[5])/([4]+273.15))*(2.71828^((17.42*[4])/([4]+239.7)))" MeasType="AbsoluteHumidity" ShortNameTag="AbsHum" SymbolTag="H" Precision="1" Minimum="0" Maximum="100" TypicalMin="5" TypicalMax="20" Visible="1"/>
       </Sensor>
-      <Sensor ID="2501" Tag="HighSpeedStepper" DefaultRate="20Hz" IconID="1131" MaxRate="100Hz" Model="PS-2976" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
-        <Measurement ID="0" NameTag="RawCountChange" Type="RawDigital" DataSize="2" TwosComp="1" UnitType="Unitless" CanChangeSign="1" Internal="1"/>
-        <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="deg" Type="RotaryPos" Inputs="0" Params="6.28319,960" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
-        <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="degps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
+      <Sensor ID="2084" Tag="WirelessAirQuality" DefaultRate="1Hz" IconID="1067" MaxRate="1Hz" Model="PS-3226" SupportsZeroOnStart="1">
+        <Measurement ID="0" NameTag="RawTemp" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="1" NameTag="RawHumidity" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="2" NameTag="RawOzone" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="3" NameTag="RawVOC" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="4" NameTag="RawPM1_0" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="5" NameTag="RawPM2_5" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="6" NameTag="RawPM10_0" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="10" NameTag="Temperature" UnitType="DegC" Equation="(([0]/65536)*165)-40" MeasType="Temperature" Precision="1" ShortNameTag="Temp" SymbolTag="T" Minimum="0" Maximum="100" TypicalMin="15" TypicalMax="30" Visible="1"/>
+        <Measurement ID="11" NameTag="RelativeHumidity" UnitType="percent" Equation="([1]/65536)*100" MeasType="Humidity" ShortNameTag="RelHumid" SymbolTag="RH" Precision="1" Minimum="0" Maximum="100" TypicalMin="15" TypicalMax="85" Visible="1"/>
+        <Measurement ID="12" NameTag="OzoneAndNOx" UnitType="ppm" Equation="([2]*0.000520562)-7.48829" MeasType="Concentration" ShortNameTag="OzoneNOx" SymbolTag="Ozone" OffsetZero="1" Precision="1" Minimum="0" Maximum="100" TypicalMin="15" TypicalMax="85" Visible="1" IsDefaultMeas="1"/>
+        <Measurement ID="13" NameTag="VolOrgCompounds" UnitType="ppm" Equation="[3]" MeasType="Concentration" ShortNameTag="VolOrgCds" SymbolTag="VOC" Precision="1" Minimum="0" Maximum="100" Visible="1"/>
+        <Measurement ID="14" NameTag="ParticMatter1" UnitType="ugpm3" Equation="[4]" MeasType="Concentration" ShortNameTag="PartMatter1" SymbolTag="PM1" Precision="1" Minimum="0" Maximum="30" Visible="1"/>
+        <Measurement ID="15" NameTag="ParticMatter2" UnitType="ugpm3" Equation="[5]" MeasType="Concentration" ShortNameTag="PartMatter2" SymbolTag="PM2" Precision="1" Minimum="0" Maximum="30" Visible="1"/>
+        <Measurement ID="16" NameTag="ParticMatter10" UnitType="ugpm3" Equation="[6]" MeasType="Concentration" ShortNameTag="PartMatter10" SymbolTag="PM10" Precision="1" Minimum="0" Maximum="30" Visible="1"/>
       </Sensor>
-      <Sensor ID="2502" Tag="LowSpeedStepper" DefaultRate="20Hz" IconID="1131" MaxRate="100Hz" Model="PS-2978" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
-        <Measurement ID="0" NameTag="RawCountChange" Type="RawDigital" DataSize="2" TwosComp="1" UnitType="Unitless" CanChangeSign="1" Internal="1"/>
-        <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="deg" Type="RotaryPos" Inputs="0" Params="6.28319,9600" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
-        <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="degps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
+      <Sensor ID="2085" Tag="WirelessCharge" DefaultRate="10Hz" IconID="203" MaxRate="10Hz" Model="PS-3240" SupportsTareCmd="1" SupportsZeroOnStart="1">
+        <Measurement ID="0" NameTag="RawCharge" Type="RawDigital" DataSize="2" Visible="1"/>
+        <Measurement ID="1" NameTag="Voltage" UnitType="V" Type="LinearConv" Inputs="0" Params="1,0" Accuracy="1" Maximum="10" MeasType="Voltage" Minimum="-10" Precision="3" ShortNameTag="Volt" SymbolTag="V" TypicalMax="1" TypicalMin="-1" Visible="1" />
+        <Measurement ID="2" NameTag="Charge" UnitType="nC" Type="LinearConv" Inputs="1" Params="10,0" Accuracy="1" Maximum="100" MeasType="Charge" Minimum="-100" Precision="3" SymbolTag="Q" TypicalMax="10" TypicalMin="-10" Visible="1" VisibleSds="1" DefaultUnit="nC" IsDefaultMeas="1"/>
       </Sensor>
-      <Sensor ID="2503" Tag="ControlNodeStepperPosition3" DefaultRate="20Hz" IconID="1131" MaxRate="100Hz" Model="PS-XXXX" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
+      <Sensor ID="2086" Tag="WirelessGM2" DefaultRate="10Hz" IconID="424" MinRate="10Hz" MaxRate="10Hz" Model="PS-3238" FirstSampleAtT1="1">
+        <Measurement ID="0" NameTag="IntervalCount" UnitType="Unitless" Equation="gmIntervalCount([2])" DataSize="2" MeasType="Count" Precision="0" Minimum="0" Maximum="100" ShortNameTag="IntCt" SymbolTag="ICt" Visible="1"/>
+        <Measurement ID="1" NameTag="RunningCount" UnitType="Unitless" Equation="sum([2])" DataSize="2" MeasType="Count" Precision="0" Minimum="0" Maximum="100" ShortNameTag="RunCt" SymbolTag="RCt" Visible="1"/>
+        <Measurement ID="2" NameTag="RawCount" UnitType="V" Type="RawDigital" DataSize="2" MeasType="Count" Precision="0" Internal="1"/>
+      </Sensor>
+      <Sensor ID="2501" Tag="HighSpeedStepper" DefaultRate="20Hz" IconID="2501" MaxRate="50Hz" Model="PS-2976" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
         <Measurement ID="0" NameTag="RawCountChange" Type="RawDigital" DataSize="2" TwosComp="1" UnitType="Unitless" CanChangeSign="1" Internal="1"/>
-        <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="deg" Type="RotaryPos" Inputs="0" Params="6.28319,480" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
-        <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="degps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
+        <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="rev" Type="RotaryPos" Inputs="0" Params="6.28319,960" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-6.28" TypicalMax="6.28" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
+        <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="revps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-6.28" TypicalMax="6.28" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
+        <Measurement ID="3" NameTag="Position" UnitType="m" Equation="[1]*0.0371" Accuracy="0.001" Maximum="1" MeasType="Position" Minimum="-1" Precision="4" ShortNameTag="pos" SymbolTag="x" Visible="1"/>
+        <Measurement ID="4" NameTag="Velocity" UnitType="mps" Type="Derivative" Equation="[2]*0.0371" Accuracy="0.001" Maximum="0.5" MeasType="Velocity" Minimum="-0.5" Precision="3" ShortNameTag="vel" SymbolTag="velocity" Visible="1"/>
+      </Sensor>
+      <Sensor ID="2502" Tag="LowSpeedStepper" DefaultRate="20Hz" IconID="2501" MaxRate="50Hz" Model="PS-2978" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
+        <Measurement ID="0" NameTag="RawCountChange" Type="RawDigital" DataSize="2" TwosComp="1" UnitType="Unitless" CanChangeSign="1" Internal="1"/>
+        <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="rev" Type="RotaryPos" Inputs="0" Params="6.28319,5760" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-0.63" TypicalMax="0.63" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
+        <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="revps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-0.63" TypicalMax="0.63" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
+      </Sensor>
+      <Sensor ID="2503" Tag="ControlNodeStepperPosition3" DefaultRate="20Hz" IconID="1131" MaxRate="50Hz" Model="PS-XXXX" SupportsZeroOnStart="1" ZeroOnRead="1" ZeroOnStart="1">
+        <Measurement ID="0" NameTag="RawCountChange" Type="RawDigital" DataSize="2" TwosComp="1" UnitType="Unitless" CanChangeSign="1" Internal="1"/>
+        <Measurement ID="1" NameTag="Angle" UnitType="rad" DefaultUnit="rev" Type="RotaryPos" Inputs="0" Params="6.28319,480" Accuracy="0.002" Maximum="6.5" MeasType="Angle" Minimum="-6.5" TypicalMin="-6.28" TypicalMax="6.28" Precision="3" ShortNameTag="ang" SymbolTag="thetaL" Visible="1" IsDefaultMeas="1"/>
+        <Measurement ID="2" NameTag="AngularVelocity" UnitType="radps" DefaultUnit="revps" Type="Derivative" Inputs="1" Params="3" Accuracy="0.002" Maximum="6.5" MeasType="AngularVelocity" Minimum="-6.5" TypicalMin="-1" TypicalMax="1" Precision="3" ShortNameTag="angvel" SymbolTag="omegaL" Visible="1"/>
       </Sensor>
       <Sensor ID="2504" Tag="LineFollower" DefaultRate="20Hz" IconID="2504" MaxRate="50Hz" SupportsZeroOnStart="1" Model="PS-3320">
-        <Measurement ID="0" NameTag="LineDetect1" UnitType="Unitless" Type="RawDigital" DataSize="1" OffsetZero="1" Minimum="0" Maximum="255" SymbolTag="L1" MeasType="LineDetect" Visible="1"/>
-        <Measurement ID="1" NameTag="LineDetect2" UnitType="Unitless" Type="RawDigital" DataSize="1" OffsetZero="1" Minimum="0" Maximum="255" SymbolTag="L2" MeasType="LineDetect" Visible="1"/>
-        <Measurement ID="2" NameTag="LineDetect3" UnitType="Unitless" Type="RawDigital" DataSize="1" OffsetZero="1" Minimum="0" Maximum="255" SymbolTag="L3" MeasType="LineDetect" Visible="1"/>
-        <Measurement ID="3" NameTag="LineDetect4" UnitType="Unitless" Type="RawDigital" DataSize="1" OffsetZero="1" Minimum="0" Maximum="255" SymbolTag="L4" MeasType="LineDetect" Visible="1"/>
+        <Measurement ID="0" NameTag="LineDetectOrd" UnitType="percent" Equation="100-([4]*0.392)" OffsetZero="1" Minimum="0" Maximum="100" Ordinal="1" ShortNameTag="LineDetOrd" SymbolTag="LOrd" MeasType="Intensity" Visible="1"/>
+        <Measurement ID="1" NameTag="LineDetectOrd" UnitType="percent" Equation="100-([5]*0.392)" OffsetZero="1" Minimum="0" Maximum="100" Ordinal="2" ShortNameTag="LineDetOrd" SymbolTag="LOrd" MeasType="Intensity" Visible="1"/>
+        <Measurement ID="2" NameTag="LineDetectOrd" UnitType="percent" Equation="100-([6]*0.392)" OffsetZero="1" Minimum="0" Maximum="100" Ordinal="3" ShortNameTag="LineDetOrd" SymbolTag="LOrd" MeasType="Intensity" Visible="1"/>
+        <Measurement ID="3" NameTag="LineDetectOrd" UnitType="percent" Equation="100-([7]*0.392)" OffsetZero="1" Minimum="0" Maximum="100" Ordinal="4" ShortNameTag="LineDetOrd" SymbolTag="LOrd" MeasType="Intensity" Visible="1"/>
+        <Measurement ID="4" NameTag="RawLineDetect1" UnitType="Percent" Type="RawDigital" DataSize="1" MeasType="LineDetectors" Internal="1"/>
+        <Measurement ID="5" NameTag="RawLineDetect2" UnitType="Percent" Type="RawDigital" DataSize="1" MeasType="LineDetectors" Internal="1"/>
+        <Measurement ID="6" NameTag="RawLineDetect3" UnitType="Percent" Type="RawDigital" DataSize="1" MeasType="LineDetectors" Internal="1"/>
+        <Measurement ID="7" NameTag="RawLineDetect4" UnitType="Percent" Type="RawDigital" DataSize="1" MeasType="LineDetectors" Internal="1"/>
       </Sensor>
-      <Sensor ID="2505" Tag="RangeFinder" DefaultRate="20Hz" IconID="1130" MaxRate="50Hz" Model="PS-3321">
-        <Measurement ID="0" NameTag="Range" UnitType="mm" Type="RawDigital" DataSize="2" Visible="1"/>
+      <Sensor ID="2505" Tag="RangeFinder" DefaultRate="20Hz" IconID="2505" MaxRate="50Hz" Model="PS-3321">
+        <Measurement ID="0" NameTag="Distance" UnitType="mm" Type="RawDigital" DataSize="2" ShortNameTag="Dist" SymbolTag="d" MeasType="Distance" Minimum="0" Maximum="1000"  TypicalMin="0" TypicalMax="1000" Limits="0,1000" Visible="1"/>
       </Sensor>
-      <Sensor ID="2506" Tag="PowerOutput" DefaultRate="20Hz" IconID="223" MaxRate="50Hz" Model="PS-3324">
+      <Sensor ID="2506" Tag="PowerOutput" DefaultRate="20Hz" IconID="2506" MaxRate="50Hz" Model="PS-3324">
       </Sensor>
-      <Sensor ID="2507" Tag="Greenhouse" DefaultRate="1Hz" IconID="215" MaxRate="1Hz" Model="PS-2997">
+      <Sensor ID="2507" Tag="Greenhouse" DefaultRate="1Hz" IconID="2507" MaxRate="1Hz" Model="PS-2997">
         <Measurement ID="0" NameTag="RawTemperature" UnitType="DegC" Type="RawDigital" DataSize="2" Internal="1"/>
-        <Measurement ID="1" NameTag="RawHumidity" UnitType="Percent" Type="RawDigital" DataSize="2" Internal="1"/>
+        <Measurement ID="1" NameTag="RawHumidity" UnitType="percent" Type="RawDigital" DataSize="2" Internal="1"/>
         <Measurement ID="2" NameTag="RawLight" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
-        <Measurement ID="3" NameTag="RawMoisture" UnitType="Percent" Type="RawDigital" DataSize="2" Internal="1"/>
-		<Measurement ID="4" NameTag="Temperature" UnitType="DegC" Equation="[0]*0.1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1" IsDefaultMeas="1"/>
-		<Measurement ID="5" NameTag="RelativeHumidity" UnitType="Percent" Equation="[1]*0.1" Accuracy="0.5" Maximum="100" MeasType="RelativeHumidity" Minimum="0" TypicalMin="20" TypicalMax="90" Precision="1" ShortNameTag="RelHum" SymbolTag="RH" Visible="1"/>
+        <Measurement ID="3" NameTag="RawMoisture" UnitType="Unitless" Type="RawDigital" DataSize="2" Internal="1"/>
+		    <Measurement ID="4" NameTag="Temperature" UnitType="DegC" Equation="[0]*0.1" Accuracy="0.5" Maximum="135" MeasType="Temperature" Minimum="-35" TypicalMin="15" TypicalMax="30" Precision="1" ShortNameTag="Temp" SymbolTag="T" Visible="1" IsDefaultMeas="1"/>
+		    <Measurement ID="5" NameTag="RelativeHumidity" UnitType="percent" Equation="[1]*0.1" Accuracy="0.5" Maximum="100" MeasType="RelativeHumidity" Minimum="0" TypicalMin="20" TypicalMax="90" Precision="1" ShortNameTag="RelHum" SymbolTag="RH" Visible="1"/>
         <Measurement ID="6" NameTag="Brightness" UnitType="percent" Equation="sqrt([2])*0.3906" MeasType="Brightness" Minimum="0" Maximum="100" TypicalMin="0" TypicalMax="20" Visible="1" ShortNameTag="brightness" SymbolTag="brns"/>
-        <Measurement ID="7" NameTag="VWC" UnitType="percent" Equation="limit((920-[3])*0.0566,0,100)" Accuracy="1" Maximum="45" TypicalMin="0" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+        <Measurement ID="7" NameTag="VWCLoam" UnitType="percent" Equation="table(([3]*60.8)+336.9,7122,45,14100,20,17245,15,51725,0)" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+        <Measurement ID="8" NameTag="VWCSand" UnitType="percent" Equation="table(([3]*60.8)+336.9,6344,35,11964,15,50689,0)" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+        <Measurement ID="9" NameTag="VWCClay" UnitType="percent" Equation="table(([3]*60.8)+336.9,6499,45,11234,25,19999,15,52875,0)" Limits="0,100" Accuracy="1" Maximum="100" TypicalMin="0" TypicalMax="50" MeasType="PercentVWC" SymbolTag="thetaL" Minimum="0" Precision="0" Visible="1"/>
+      </Sensor>
+      <Sensor ID="2508" Tag="GreenhouseGrowLight" DefaultRate="20Hz" IconID="2508" MaxRate="50Hz" Model="PS-xxxx">
       </Sensor>
       <Sensor ID="3000" Tag="OOSpectrumAnalyzer" Version="2.0" Class="0" DefaultRate="1Hz" FileName="OceanOpticsUsb.sds" FloatParams="0" Icon="00008100c201a4c298e413792c3d722d164218226614810d0006000000000000" IconID="3000" Latency="100" MaxDatasheet="8192" MaxRate="10Hz" Model="OO-0001" Warmup="1">
         <Measurement ID="0" NameTag="Intensity" UnitType="Unitless" Type="RawDigital" DataSize="8" Accuracy="1" Display="Graph" Internal="0" Maximum="4095" Minimum="0" Precision="0" TypicalMax="4095" TypicalMin="0" Visible="1" VisibleSds="1" XplorerDefault="1"/>
@@ -2947,6 +3008,9 @@
         <SupportedCmd ID="65" Size="4"/>
       </Sensor>
      <!-- Sensor IDs 32000 - 33001 Video Lib Related Sensors - Add New Sensors BEFORE 33001, Due to Conflict with Expansion Port Sensor -->
+      <Sensor ID="32299" Tag="VideoSnapshotSensor" Version="0.1" Class="0" DefaultRate="30Hz" FileName="" FloatParams="0" IconID="33001" Latency="1" MaxDatasheet="2048" MaxRate="1Hz" Model="PS-Video" Warmup="1">
+        <Measurement ID="0" NameTag="ImageSequence" UnitType="Unitless" Type="FactoryCal" Inputs="0" Params="2048,0,0,0" Accuracy="0.1" Display="Graph" Internal="0" Maximum="1" MeasType="Video" Minimum="-1" Precision="1" ShortNameTag="Video" TypicalMax="1" TypicalMin="-1" Visible="0"/>
+      </Sensor>
       <Sensor ID="33001" Tag="VideoSensor" Version="0.1" Class="0" DefaultRate="30Hz" FileName="" FloatParams="0" IconID="33001" Latency="1" MaxDatasheet="2048" MaxRate="100Hz" Model="PS-Video" Warmup="1">
         <Measurement ID="0" NameTag="VideoMeasurement" UnitType="Unitless" Type="FactoryCal" Inputs="0" Params="2048,0,0,0" Accuracy="0.1" Display="Graph" Internal="0" Maximum="1" MeasType="Video" Minimum="-1" Precision="1" ShortNameTag="Video" TypicalMax="1" TypicalMin="-1" Visible="0"/>
       </Sensor>
@@ -2955,8 +3019,9 @@
       </Sensor>
     </Sensors>
     <InterfaceGroups>
-        <Group ID="1" Name="WirelessSensors" InterfaceIDs="24,1025-1052,1055-1056,1062-1063,1066"/>
+        <Group ID="1" Name="WirelessSensors" InterfaceIDs="24,1025-1053,1055-1060,1062-1067"/>
         <Group ID="2" Name="DataStreamerSupported" InterfaceIDs="1025-1028,1030-1036,1039-1047,1049-1051"/>
+        <Group ID="3" Name="Chemvue" InterfaceIDs="7,13,16,18,20,22,25,26,28,1024-1027,1030-1034,1036-1038,1043,1045,1046,1049,1053,1064-1067" />
     </InterfaceGroups>
     <Interfaces>
       <Interface ID="3" NameTag="USBLink" Image="USBLink.bmp">
@@ -3093,7 +3158,7 @@
       <Interface ID="21" NameTag="Polarimeter" BTNameMatch="Polarimeter" Image="Polarimeter.bmp" DiscoveryImage="Icon1062.png">
         <Channel ID="0" NameTag="" HitRect="0,0,0,0" PlugDetect ="1" Type=""/>
       </Interface>
-      <Interface ID="22" NameTag="PS550" BTNameMatch="PS550" Image="PS550.png">
+      <Interface ID="22" NameTag="PS550" BTNameMatch="PS550" Image="PS550.png" AdvertisingName="550 Interface">
         <Channel ID="0" NameTag="" HitRect="50,34,10,10" PlugDetect ="1" Type="Pasport" ChannelIDTag="P1"/>
         <Channel ID="1" NameTag="" HitRect="94,34,10,10" PlugDetect ="1" Type="Pasport" ChannelIDTag="P2"/>
         <Channel ID="2" NameTag="" HitRect="170,29,14,14" Type="CIAnalog" ChannelIDTag="A"/>
@@ -3116,7 +3181,7 @@
           <Channel ID="3" NameTag="OnboardLightSensor" HitRect="0,0,0,0" PlugDetect ="0" Type=""/>
           <Channel ID="4" NameTag="OnboardGPSSensor" HitRect="0,0,0,0" PlugDetect ="0" Type=""/>
       </Interface>
-      <Interface ID="24" NameTag="WirelessHeartRate" Image="" DiscoveryImage="Icon24.png">
+      <Interface ID="24" NameTag="WirelessHeartRate" Image="" DiscoveryImage="Icon24.png" AdvertisingName="Polar H7">
           <Channel ID="0" NameTag="HeartRate" HitRect="0,0,0,0" SensorID="2040" Type="Pasport"/>
       </Interface>
       <Interface ID="25" NameTag="SparkLXi" Image="SparkLink.bmp">
@@ -3133,7 +3198,13 @@
       </Interface>
       <Interface ID="27" NameTag="BrolightSpectrometer" Image="Spectrometer.bmp">
         <Channel ID="0" NameTag="" HitRect="0,0,0,0" Type=""/>
-	  </Interface>
+      </Interface>
+      <Interface ID="28" NameTag="SparkLXi2Vantron" Image="SparkLink.bmp">
+        <Channel ID="0" NameTag="Ch2" HitRect="129,35,10,10" PlugDetect ="1" Type="Pasport" ChannelIDTag="2"/>
+        <Channel ID="1" NameTag="Ch1" HitRect="37,35,10,10" PlugDetect ="1" Type="Pasport" ChannelIDTag="1"/>
+        <Channel ID="2" NameTag="Voltage" HitRect="77,42,10,10" PlugDetect ="1" Type="Voltage" ChannelIDTag="V"/>
+        <Channel ID="3" NameTag="Temp" HitRect="96,38,10,10" PlugDetect ="1" Type="Temperature" ChannelIDTag="T"/>
+      </Interface>
       <Interface ID="1024" NameTag="Airlink3" AdvertisingName="AirLink" Image="Airlink3.png">
         <Channel ID="0" NameTag="" HitRect="22,26,15,15" PlugDetect ="1" Type="Pasport"/>
       </Interface>
@@ -3242,7 +3313,7 @@
           <Channel ID="0" NameTag="SoundWave" HitRect="10,100,10,10" SensorID="2062" Type="Pasport"/>
           <Channel ID="1" NameTag="SoundLevel" HitRect="10,100,10,10" SensorID="2063" Type="Pasport"/>
       </Interface>
-      <Interface ID="1053" NameTag="WirelessLightA" SupportsLogging="1">
+      <Interface ID="1053" NameTag="WirelessLightColor" SupportsLogging="1">
           <Channel ID="0" NameTag="" HitRect="10,100,10,10" SensorID="2061" Type="Pasport"/>
           <Channel ID="1" NameTag="" HitRect="10,100,10,10" SensorID="2034" Type="Pasport"/>
       </Interface>
@@ -3267,47 +3338,56 @@
           <Channel ID="6" NameTag="BlueOutput" Type="Output" OrdinalPos="3" OutputType="13"/>
           <Channel ID="7" NameTag="CodeNodeSpeaker" Type="Output" OutputType="14"/>
       </Interface>
-      <Interface ID="1057" NameTag="WirelessControlNode" Image="ControlNode.png">
-		  <Channel ID="0" NameTag="" HitRect="152,66,15,15" PlugDetect="1" Type="Pasport" ChannelIDTag="1"/>
-		  <Channel ID="1" NameTag="" HitRect="204,65,15,15" PlugDetect="1" Type="Pasport" ChannelIDTag="2"/>
-		  <Channel ID="2" NameTag="" HitRect="102,68,15,15" PlugDetect="1" Type="Pasport" ChannelIDTag="3"/>
-		  <Channel ID="3" NameTag="" SensorID="2082" Type="Pasport" ChannelIDTag="4"/>
-          <Channel ID="4" NameTag="ControlNodeBeeper" Type="Output" OutputType="14"/>
+      <Interface ID="1057" NameTag="WirelessControlNode" Image="ControlNode.png" AdvertisingName="//control.Node" DiscoveryImage="Icon1057.png">
+          <Channel ID="0" NameTag="" HitRect="147,75,15,15" PlugDetect="1" Type="Pasport" ChannelIDTag="A"/>
+          <Channel ID="1" NameTag="" HitRect="196,75,15,15" PlugDetect="1" Type="Pasport" ChannelIDTag="B"/>
+          <Channel ID="2" NameTag="" HitRect="98,75,15,15" PlugDetect="1" Type="Pasport"/>
+          <Channel ID="3" NameTag="" SensorID="2082" Type="Pasport"/>
+          <Channel ID="4" NameTag="ControlNodeSpeaker" Type="Output" OutputType="14"/>
       </Interface>
-      <Interface ID="1058" NameTag="WirelessSpirometer" SupportsLogging="1" AdvertisingName="Spirometer" >
+      <Interface ID="1058" NameTag="WirelessSpirometer" SupportsLogging="1" AdvertisingName="Spirometer" DiscoveryImage="Icon1058.svg">
           <Channel ID="0" NameTag="Pressure" SensorID="2071" Type="Pasport"/>
       </Interface>
-      <Interface ID="1059" NameTag="WirelessForcePlatform" SupportsLogging="1">
+      <Interface ID="1059" NameTag="WirelessForcePlatform" AdvertisingName="Force Platform" SupportsLogging="1" DiscoveryImage="Icon1059.svg">
           <Channel ID="0" NameTag="ForceBeams" SensorID="2076" Type="Pasport"/>
       </Interface>
-      <Interface ID="1060" NameTag="WirelessForcePlatform2D" SupportsLogging="1">
+      <Interface ID="1060" NameTag="WirelessForcePlatform2D" AdvertisingName="Force Plat. 2D" SupportsLogging="1" DiscoveryImage="Icon1060.svg">
           <Channel ID="0" NameTag="ForceBeams2D" SensorID="2077" Type="Pasport"/>
       </Interface>
       <Interface ID="1061" NameTag="WirelessPowerMeter">
           <Channel ID="0" NameTag="Data" SensorID="2072" Type="Pasport"/>
       </Interface>
-      <Interface ID="1062" NameTag="WirelessPolarimeter" DiscoveryImage="Icon1062.png">
+      <Interface ID="1062" NameTag="WirelessPolarimeter" AdvertisingName="Polarimeter" DiscoveryImage="Icon1062.png">
           <Channel ID="0" NameTag="Polarimeter" SensorID="2073" Type="Pasport"/>
       </Interface>
       <Interface ID="1063" NameTag="WirelessEKG" SupportsLogging="1" AdvertisingName="EKG" DiscoveryImage="Icon1063.png">
           <Channel ID="0" NameTag="Voltage" SensorID="2074" Type="Pasport"/>
           <Channel ID="1" NameTag="HeartRate" SensorID="2075" Type="Pasport"/>
       </Interface>
-      <Interface ID="1064" NameTag="WirelessGM" SupportsLogging="1" AdvertisingName="Geiger">
+      <Interface ID="1064" NameTag="WirelessGM" SupportsLogging="1" AdvertisingName="Geiger Counter" DiscoveryImage="Icon1064.svg">
           <Channel ID="0" NameTag="Counts" SensorID="2079" Type="Pasport"/>
-          <Channel ID="1" NameTag="Voltage" Type="Output" OutputType="15"/>
+          <Channel ID="1" NameTag="Counts2" SensorID="2086" Type="Pasport"/>
+          <!--Debug--><Channelx ID="1" NameTag="Voltage" Type="Output" OutputType="15"/>
       </Interface>
-      <Interface ID="1065" NameTag="WirelessMeltTemp" SupportsLogging="1" AdvertisingName="Melt Temp" Image="MeltTemp.png">
+      <Interface ID="1065" NameTag="WirelessMeltTemp" SupportsLogging="0" AdvertisingName="Melt Temp" DiscoveryImage="Icon1065.svg">
           <Channel ID="0" NameTag="Temperature" SensorID="2080" Type="Pasport"/>
-          <Channel ID="1" NameTag="Image" SensorID="2081" Type="Pasport"/>
+          <!--Debug--><Channelx ID="1" NameTag="SetTempRaw" Type="Output" OutputType="16"/>
+          <!--Debug--><Channelx ID="2" NameTag="FanSpeedPercent" Type="Output" OutputType="17"/>
+          <!--Debug--><Channelx ID="3" NameTag="HeaterPercent" Type="Output" OutputType="18"/>
       </Interface>
       <Interface ID="1066" NameTag="WirelessCO" AdvertisingName="CO" SupportsLogging="1" DiscoveryImage="Icon1066.png">
           <Channel ID="0" NameTag="CO" SensorID="2083" Type="Pasport"/>
       </Interface>
+      <Interface ID="1067" NameTag="WirelessAirQuality" AdvertisingName="Air Quality" SupportsLogging="1" DiscoveryImage="Icon1067.svg">
+          <Channel ID="0" NameTag="CO" SensorID="2084" Type="Pasport"/>
+      </Interface>
+      <Interface ID="1068" NameTag="WirelessCharge" AdvertisingName="Charge" SupportsLogging="1">
+          <Channel ID="0" NameTag="Charge" SensorID="2085" Type="Pasport"/>
+      </Interface>
     </Interfaces>
     <OutputGroups>
-      <Group ID="1" Name="SigGenOutputs" OutputIDs="1-4,6,9,15"/>
-      <Group ID="2" Name="BlocklyOutputs" OutputIDs="1-9,12,15"/>
+      <Group ID="1" Name="SigGenOutputs" OutputIDs="1-4,6,9,15-18"/>
+      <Group ID="2" Name="BlocklyOutputs" OutputIDs="1-9,12,15-18"/>
       <Group ID="3" Name="BlocklyFrequencyOutputs" OutputIDs="1-4,6,9,14"/>
     </OutputGroups>
     <Outputs>
@@ -3420,7 +3500,23 @@
       </Output>
       <Output ID="15" NameTag="GeigerVoltage">
         <Waveform Waveforms="DC"/>
-        <DCVoltage Max="0" Min="100" Default="0" Step="1"/>
+        <DCVoltage Max="700" Min="200" Default="500" Step="1"/>
+        <!--Debug--><DCVoltagex Max="63" Min="0" Default="39" Step="1"/>
+      </Output>
+      <Output ID="16" NameTag="MeltTempSetTempRaw">
+        <Waveform Waveforms="DC"/>
+        <DCVoltage Max="8191" Min="0" Default="0" Step="1" DCLimit="8192"/>
+        <VoltageLimit Default="8192" Max="8192" Min="0" Step="1"/>
+      </Output>
+      <Output ID="17" NameTag="MeltTempFanPercent">
+        <Waveform Waveforms="DC"/>
+        <DCVoltage Max="100" Min="0" Default="0" Step="1"/>
+      </Output>
+      <Output ID="18" NameTag="MeltTempHeaterPercent">
+        <Waveform Waveforms="DC"/>
+        <DCVoltage Max="10000" Min="0" Default="0" Step="1"/>
+        <VoltageLimit Default="10000" Max="10000" Min="10000" Step="1"/>
       </Output>
     </Outputs>
   </Datasheets>
+'''
