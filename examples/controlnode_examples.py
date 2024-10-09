@@ -1,3 +1,4 @@
+# controlnode_examples.py
 """
 The control node supports:
 - Steppers (connected in ports A and B)
@@ -6,21 +7,17 @@ The control node supports:
 - Plugin sensors such as rangefinder and line follower (connected in Sensor port)
 This python file shows examples of how to work with these
 """
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from src.pasco.control_node_device import ControlNodeDevice
+from pasco import ControlNodeDevice
 import time
 
-def steppers(controlNode):
+def steppers(controlNode: ControlNodeDevice):
     """
     Run this with the pascobot
     Plug the right stepper into port A and the left stepper into port B and the bot will drive forward
     """
     controlNode.rotate_steppers_through(-360, -360, 360, 360, 360, 360, await_completion=True)
 
-def distance(controlNode):
+def distance(controlNode: ControlNodeDevice):
     """
     Run this with the pascobot
     Plug the right stepper into port A and the left servo into port B. 
@@ -33,7 +30,7 @@ def distance(controlNode):
         print(controlNode.read_data('Distance'))
     controlNode.stop_steppers(360, 360)
 
-def servos(controlNode):
+def servos(controlNode: ControlNodeDevice):
     """
     Run this with the pascobot with the bot gripper attachment
     Plug the right stepper into port A and the left servo into port B. 
@@ -50,18 +47,17 @@ def servos(controlNode):
 
 # To see steppers, servos and the range finder working together, see grabberbot.py
 
-def power_board(controlNode):
+def power_board(controlNode: ControlNodeDevice):
     """
-    plug in a power output board into port A of your control node,
+    Plug in a power output board into port A of your control node,
     with an accessory in the USB output of channel 1 on the power output board
     """
     controlNode.set_power_out('A', 1, 'USB', True)
     time.sleep(1)
 
-
-def greenhouse_light(controlNode):
+def greenhouse_light(controlNode: ControlNodeDevice):
     """
-    plug the greenhouse light into port B of the control node.
+    Plug the greenhouse light into port B of the control node.
     This will start with the light red and gradually transition 
     through purple to blue, then turn off
     """
@@ -71,12 +67,15 @@ def greenhouse_light(controlNode):
         time.sleep(1)
     controlNode.set_greenhouse_light('B', 0, 0)
 
-
 def main():
     controlNode = ControlNodeDevice()
-    sensor_id = '651-400' # replace this with the 6-digit id of your control node
-    controlNode.connect_by_id(sensor_id)
-    # to find what measurements are available, call get_measurement_list()
+    sensor_id = '123-456'  # Replace this with the 6-digit id of your control node
+    try:
+        controlNode.connect_by_id(sensor_id)
+    except Exception as e:
+        print(f"Could not connect to sensor: {e}")
+        exit()
+    # To find what measurements are available, call get_measurement_list()
     print(controlNode.get_measurement_list())
 
     # Pick what you want to try here
@@ -84,7 +83,6 @@ def main():
 
     controlNode.reset()
     controlNode.disconnect()
-
 
 if __name__ == "__main__":
     main()

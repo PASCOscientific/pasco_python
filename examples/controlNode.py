@@ -7,16 +7,10 @@ Objectives:
 Create and test functionality for all functions of the 
 //control.Node defined in SPARKvue.
 """
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from src.pasco.control_node_device import ControlNodeDevice
+from pasco import ControlNodeDevice
 import time
 
-
 # ------------ Acceleration sensor sample rate benchmark ------------
-
 def test_read_data():
     print("Testing Read Data")
     start = time.monotonic()
@@ -25,7 +19,6 @@ def test_read_data():
     end = time.monotonic()
     print(f"{end-start} seconds elapsed")
     print(f"{100/(end-start)} Hz sample rate")
-
 
 # ------------ Steppers -----------
 def test_steppers_continuous():
@@ -44,7 +37,7 @@ def test_steppers_through():
     rotating both steppers through
     A: 180 degrees
     B: 360 degrees
-          """)
+    """)
     controlNode.read_data('Angle', 'A')
     controlNode.read_data('Angle', 'B')
     controlNode.rotate_steppers_through(360, 360, 180, 360, 360, 360, True)
@@ -63,7 +56,6 @@ def test_steppers_complex():
     controlNode.stop_stepper("A", 90)
     time.sleep(3)
 
-
 # ------------ Set Servos -------------
 def test_servos():
     print("testing servos")
@@ -77,7 +69,6 @@ def test_servos():
     time.sleep(1)
     print("done")
 
-
 # ----------- Set Power out -----------
 def test_power_board():
     controlNode.set_power_out('b', 1, 'terminal', 100)
@@ -89,14 +80,12 @@ def test_power_board():
     controlNode.set_power_out('b', 2, 'usb', 0)
     controlNode.set_power_out('a', 2, 'usb', 0)
 
-
 # -------- Set Sound Frequency --------
 def test_sound():
     controlNode.set_sound_frequency(440)
     time.sleep(1)
     controlNode.set_sound_frequency(0)
     time.sleep(1)
-
 
 # ------- Servo current -----------
 def test_servos_current():
@@ -115,15 +104,15 @@ def test_greenhouse_light():
         time.sleep(1)
     controlNode.set_greenhouse_light('B', 0, 0)
 
-
 if __name__ == "__main__":
     controlNode = ControlNodeDevice()
-    controlNode.connect_by_id('653-498') #Put your 6-digit sensor ID here
+    try:
+        controlNode.connect_by_id('123-456')  # Put your 6-digit sensor ID here
+    except Exception as e:
+        print(f"Could not connect to sensor: {e}")
+        exit()
+
     measurement_list = controlNode.get_measurement_list()
-    [print(f"{m}: {controlNode.read_data(m)}") for m in measurement_list]
+    for m in measurement_list:
+        print(f"{m}: {controlNode.read_data(m)}")
     controlNode.disconnect()
-
-
-
-
-

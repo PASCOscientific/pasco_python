@@ -106,20 +106,19 @@ Each "sensor" can have multiple measurements
 For a regular wireless sensor:
 
 ```
-from src.pasco.pasco_ble_device import PASCOBLEDevice 
-# src is necessary until pip repository is updated
+from pasco.pasco_ble_device import PASCOBLEDevice
 ```
 
 To connect to a /\/code.Node (Note: The Icons package is optional):
 
 ```
-from src.pasco.code_node_device import CodeNodeDevice, Icons
+from pasco.code_node_device import CodeNodeDevice, Icons
 ```
 
 To connect to a /\/control.Node:
 
 ```
-from src.pasco.control_node_device import ControlNodeDevice
+from pasco.control_node_device import ControlNodeDevice
 ```
 
 ## Step 2: Create an object for the device
@@ -165,7 +164,7 @@ else:
 ### Putting it all together:
 
 ```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
+from pasco.pasco_ble_device import PASCOBLEDevice
 
 my_sensor = PASCOBLEDevice()
 found_devices = my_sensor.scan()
@@ -219,7 +218,7 @@ To get the units for a list of measurements
 ##  Example: One shot read
 
 ```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
+from pasco.pasco_ble_device import PASCOBLEDevice
 
 
 temp_sensor = PASCOBLEDevice()
@@ -237,7 +236,7 @@ temp_sensor.disconnect()
 Scan for a sensor and get the current temperature. In this example we can use a Temperature, Weather or /\/code.Node to read the temperature measurement. We do not need to specify a device type. We will continuously read and display the result.
 
 ```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
+from pasco.pasco_ble_device import PASCOBLEDevice
 
 
 my_sensor = PASCOBLEDevice()
@@ -268,7 +267,7 @@ my_sensor.disconnect()
 In order to connect to a /\/code.Node we must import the `CodeNodeDevice` object and (optionally) the character library which allows a user to display icons on the 5x5 LED Array.
 
 ```
-from src.pasco.code_node_device import CodeNodeDevice, Icons
+from pasco.code_node_device import CodeNodeDevice, Icons
 ```
 
 `my_code_node = CodeNodeDevice()` Create /\/code.Node Bluetooth device object  
@@ -370,7 +369,7 @@ Turn the 5x5 LED display, RGB LED and speaker off.
 Below is a simple example that shows how to connect to a /\/code.Node, read a measurement and control an output.
 
 ```
-from src.pasco.code_node_device import CodeNodeDevice
+from pasco.code_node_device import CodeNodeDevice
 
 
 code_node = CodeNodeDevice()
@@ -393,8 +392,8 @@ code_node.disconnect()
 We can also connect to multiple sensors. Here we are connecting to a /\/code.Node and Wireless Force Sensor. We are also using /\/code.Node specific commands and testing the Character Library.
 
 ```
-from src.pasco.pasco_ble_device import PASCOBLEDevice
-from src.pasco.code_node_device import CodeNodeDevice, Icons
+from pasco.pasco_ble_device import PASCOBLEDevice
+from pasco.code_node_device import CodeNodeDevice, Icons
 
 
 code_node_device = CodeNodeDevice()
@@ -452,7 +451,7 @@ The control.Node has commands for setting steppers, servos, and the power output
 
 If you know the 6-digit code of your control node device, you can just connect:
 
-    from src.pasco.control_node_device import ControlNodeDevice
+    from pasco.control_node_device import ControlNodeDevice
     import time
 
     controlNode = ControlNodeDevice()
@@ -460,7 +459,7 @@ If you know the 6-digit code of your control node device, you can just connect:
 
 Now put the \/\/control.Node into the pascobot. Plug in the steppers into ports A and B on the \/\/control.Node, and run the following code. 
 
-    from src.pasco.control_node_device import ControlNodeDevice
+    from pasco.control_node_device import ControlNodeDevice
     import time
 
     controlNode = ControlNodeDevice()
