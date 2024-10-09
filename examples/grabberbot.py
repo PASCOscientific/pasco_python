@@ -1,11 +1,6 @@
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from src.pasco.pasco_bot import PascoBot
-from src.pasco.pasco_ble_device import PASCOBLEDevice
+# grabberbot.py
+from pasco import PascoBot, PASCOBLEDevice
 import time
-
 
 """
 Run this with the pascobot with the bot gripper attachment
@@ -19,70 +14,69 @@ Run this with the pascobot with the bot gripper attachment
 6. Line up the bot facing directly away from a table edge with a box directly in front of it.
 7. Run the program. The bot will go up to the box, pick it up, back up to the edge of the table,
    turn around, and drop the box.
-""" 
+"""
 
 FORCE_OFF_TABLE = 12.7
 
 def release():
-    gary.set_servo(1, 'standard', -60)
+    pasco_bot.set_servo(1, 'standard', -60)
     time.sleep(0.5)
 
 def grab():
-    while(gary.read_data('ServoCurrentOrd', 1) < 20):
-        gary.set_servo(1, 'standard', 20)
+    while pasco_bot.read_data('ServoCurrentOrd', 1) < 20:
+        pasco_bot.set_servo(1, 'standard', 20)
 
 def lower():
-    gary.set_servo(2, 'standard', 80)
+    pasco_bot.set_servo(2, 'standard', 80)
     time.sleep(0.5)
 
 def lift():
-    gary.set_servo(2, 'standard', -60)
+    pasco_bot.set_servo(2, 'standard', -60)
     time.sleep(0.5)
-
 
 def grabberbot():
     lift()
     release()
-    gary.drive(10,10)
-    distance = gary.read_data('Distance')
+    pasco_bot.drive(10, 10)
+    distance = pasco_bot.read_data('Distance')
     while distance > 100:
-        distance = gary.read_data('Distance')
+        distance = pasco_bot.read_data('Distance')
         print(f"Distance: {distance}")
 
-    gary.stop_steppers(360, 360)
+    pasco_bot.stop_steppers(360, 360)
     lower()
     grab()
     lift()
-    gary.drive(-5, 10)
+    pasco_bot.drive(-5, 10)
     time.sleep(0.5)
-    force = frank.read_data('Force')
-    while(frank.read_data('Force') > FORCE_OFF_TABLE):
-        force = frank.read_data('Force')
+    force = force_sensor.read_data('Force')
+    while force_sensor.read_data('Force') > FORCE_OFF_TABLE:
+        force = force_sensor.read_data('Force')
         print(f"force: {force:.2f}")
-    gary.stop_steppers(360,360)
-    gary.turn(-180)
+    pasco_bot.stop_steppers(360, 360)
+    pasco_bot.turn(-180)
     release()
-    gary.turn(180)
-
+    pasco_bot.turn(180)
 
 def test_force():
-    gary.drive(-5,10)
+    pasco_bot.drive(-5, 10)
     time.sleep(0.2)
-    while(frank.read_data('Force')>12.7):
-        print(frank.read_data('Force'))
-    gary.stop_steppers(360, 360)
-    gary.turn(180)
-
+    while force_sensor.read_data('Force') > 12.7:
+        print(force_sensor.read_data('Force'))
+    pasco_bot.stop_steppers(360, 360)
+    pasco_bot.turn(180)
 
 if __name__ == "__main__":
-
-    gary = PascoBot()
-    gary.connect_by_id('664-591') #Put your 6-digit sensor ID here
-
-    # frank is a force sensor
-    frank = PASCOBLEDevice()
-    frank.connect_by_id('248-287')
+    pasco_bot = PascoBot()
+    force_sensor = PASCOBLEDevice()
+    try:
+        pasco_bot.connect_by_id('123-456')  # Put your 6-digit sensor ID here
+        force_sensor.connect_by_id('654-321')
+    except Exception as e:
+        print(f"Could not connect to both sensors: {e}")
+        exit()
 
     grabberbot()
-    frank.disconnect()
-    gary.disconnect()
+
+    force_sensor.disconnect()
+    pasco_bot.disconnect()
