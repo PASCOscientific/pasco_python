@@ -54,7 +54,6 @@ In your project file, import the `PASCOBLEDevice` class, the `CodeNodeDevice` cl
 - Wireless pH
 - Wireless Pressure
 - Wireless Rotary Motion
-- Wireless Smart Cart
 - Wireless Temperature
 - Wireless Voltage
 - Wireless Weather
