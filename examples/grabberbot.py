@@ -70,10 +70,20 @@ if __name__ == "__main__":
     pasco_bot = PascoBot()
     force_sensor = PASCOBLEDevice()
     try:
-        pasco_bot.connect_by_id('123-456')  # Put your 6-digit sensor ID here
-        force_sensor.connect_by_id('654-321')
+        botID = '123-456' # Put your 6-digit sensor ID here
+        pasco_bot.connect_by_id(botID)
     except Exception as e:
-        print(f"Could not connect to both sensors: {e}")
+        print(f"Could not connect to sensor: {botID}")
+        print(type(e))
+        exit()
+    try:
+        forceSensorID = '123-456' # Put your 6-digit sensor ID here
+        force_sensor.connect_by_id(forceSensorID)
+    except Exception as e:
+        if pasco_bot.is_connected():
+            pasco_bot.disconnect()
+        print(f"Could not connect to sensor: {forceSensorID}")
+        print(type(e))
         exit()
 
     grabberbot()

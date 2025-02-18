@@ -107,9 +107,11 @@ def test_greenhouse_light():
 if __name__ == "__main__":
     controlNode = ControlNodeDevice()
     try:
-        controlNode.connect_by_id('123-456')  # Put your 6-digit sensor ID here
+        sensorID = '123-456' # Put your 6-digit sensor ID here
+        controlNode.connect_by_id(sensorID)
     except Exception as e:
-        print(f"Could not connect to sensor: {e}")
+        print(f"Could not connect to sensor: {sensorID}")
+        print(type(e))
         exit()
 
     measurement_list = controlNode.get_measurement_list()

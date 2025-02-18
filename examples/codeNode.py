@@ -4,9 +4,11 @@ import time
 
 code_node = CodeNodeDevice()
 try:
-    code_node.connect_by_id('123-456')  # Put your 6-digit sensor ID here
+    sensorID = '123-456' # Put your 6-digit sensor ID here
+    code_node.connect_by_id(sensorID)
 except Exception as e:
-    print(f"Could not connect to sensor: {e}")
+    print(f"Could not connect to sensor: {sensorID}")
+    print(type(e))
     exit()
 
 start = time.monotonic()

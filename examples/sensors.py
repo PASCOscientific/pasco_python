@@ -4,9 +4,11 @@ import time
 
 sensor = PASCOBLEDevice()
 try:
-    sensor.connect_by_id('123-456')  # Put your 6-digit sensor ID here
+    sensorID = '123-456' # Put your 6-digit sensor ID here
+    sensor.connect_by_id(sensorID)
 except Exception as e:
-    print(f"Could not connect to sensor: {e}")
+    print(f"Could not connect to sensor: {sensorID}")
+    print(type(e))
     exit()
 
 for measurement in sensor.get_measurement_list():
