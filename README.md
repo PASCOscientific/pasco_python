@@ -27,6 +27,12 @@ To install the PASCO package into your Python environment, type this into your T
 pip install pasco
 ```
 
+If you are using Anaconda to manage your packages you can run
+
+```
+conda install pascoscientific::pasco
+```
+
 
 In your project file, import the `PASCOBLEDevice` class, the `CodeNodeDevice` class, and/or the `ControlNodeDevice` class.
 
@@ -493,6 +499,10 @@ After you reinstall Python you will also need to reinstall the pasco package.
 If you get an error like `no module named "<module name>"` try
 ```
 pip install pasco
+``````
+Or
+```
+conda install pascoscientific::pasco
 ``````
 
 ### 3. Is the device on?
