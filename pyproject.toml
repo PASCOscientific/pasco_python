@@ -14,7 +14,7 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Unix",
 ]
-requires-python = ">=3.11"
+requires-python = "==3.11"
 dependencies = [
     "bleak==0.20.2",
     "nest_asyncio==1.5.6",

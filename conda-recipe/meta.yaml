@@ -1,0 +1,39 @@
+package:
+  name: pasco
+  version: "0.3.65"
+
+source:
+  git_url: https://github.com/PASCOscientific/pasco_python.git
+  git_rev: master
+
+build:
+  number: 0
+  script: |
+    pip install .
+  noarch: python
+
+requirements:
+  build:
+    - python ==3.11
+    - pip
+    - setuptools >=61.2
+  run:
+    - python ==3.11
+    - bleak ==0.20.2
+    - nest-asyncio ==1.5.6
+
+about:
+  home: https://github.com/PASCOscientific/pasco_python
+  license: Proprietary
+  license_file: LICENSE
+  summary: "PASCO Python API for Wireless Sensors"
+  description: |
+    PASCO Python API provides wireless sensor communication via Bluetooth.
+  dev_url: https://github.com/PASCOscientific/pasco_python
+  doc_url: https://github.com/PASCOscientific/pasco_python/blob/master/README.md
+
+extra:
+  recipe-maintainers:
+    - crichardspasco
+  channels:
+    - conda-forge
