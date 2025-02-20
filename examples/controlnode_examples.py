@@ -69,11 +69,12 @@ def greenhouse_light(controlNode: ControlNodeDevice):
 
 def main():
     controlNode = ControlNodeDevice()
-    sensor_id = '123-456'  # Replace this with the 6-digit id of your control node
     try:
-        controlNode.connect_by_id(sensor_id)
+        sensorID = '123-456' # Put your 6-digit sensor ID here
+        controlNode.connect_by_id(sensorID)
     except Exception as e:
-        print(f"Could not connect to sensor: {e}")
+        print(f"Could not connect to sensor: {sensorID}")
+        print(type(e))
         exit()
     # To find what measurements are available, call get_measurement_list()
     print(controlNode.get_measurement_list())
