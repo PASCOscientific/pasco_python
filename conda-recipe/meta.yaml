@@ -14,7 +14,7 @@ build:
 
 requirements:
   build:
-    - python ==3.11
+    - python >=3.11
     - pip
     - setuptools >=61.2
   run:
