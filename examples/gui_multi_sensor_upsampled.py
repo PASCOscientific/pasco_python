@@ -174,12 +174,21 @@ class SensorClient:
         if not data_to_save:
             raise ValueError(f"No {'upsampled' if use_upsampled else 'raw'} data to save")
 
+        # Convert deque to list for iteration
+        data_list = list(data_to_save)
+
         with open(path, 'w', newline='', encoding='utf-8') as f:
             w = csv.writer(f)
             mode = 'upsampled' if use_upsampled else 'raw'
             w.writerow(['time_s', self.selected_measurement or 'value', f'mode={mode}'])
-            for t, v in data_to_save:
+
+            rows_written = 0
+            for t, v in data_list:
                 w.writerow([f"{t:.6f}", f"{float(v):.4f}"])
+                rows_written += 1
+
+        print(f"Saved {rows_written} rows to {path}")  # Debug
+        return rows_written
 
 
 class App(tk.Tk):
@@ -443,14 +452,22 @@ class App(tk.Tk):
         self.log(f'Sensor {sensor.name}: disconnected')
 
     def start_recording(self):
+        # Clear old data
         for s in self.sensors:
             s.raw_data.clear()
             s.upsampled_data.clear()
             s.actual_sample_count = 0
 
+        # Check which sensors are connected
+        connected_sensors = [s.name for s in self.sensors if s.connected]
+        if not connected_sensors:
+            messagebox.showwarning('Start Recording', 'No sensors connected!')
+            return
+
         self.recording = True
         self.t0 = None
         self.log(f'Recording started (target {self.upsample_fs}Hz upsampled)')
+        self.log(f'Connected sensors: {", ".join(connected_sensors)}')
 
         # Open CSV for auto-logging (upsampled data)
         try:
@@ -476,7 +493,13 @@ class App(tk.Tk):
                 pass
             self._tick_after_id = None
 
+        # Log data summary
         self.log('Recording stopped')
+        for s in self.sensors:
+            if s.connected:
+                raw_count = len(s.raw_data)
+                ups_count = len(s.upsampled_data)
+                self.log(f'  Sensor {s.name}: {raw_count} raw, {ups_count} upsampled samples')
 
         # Close CSV
         if self.csv_file:
@@ -701,8 +724,8 @@ class App(tk.Tk):
             if s.raw_data:
                 try:
                     path_raw = f"{folder}/sensor_{s.name}_raw_{ts}.csv"
-                    s.save_csv(path_raw, use_upsampled=False)
-                    self.log(f'✓ Saved raw: {path_raw}')
+                    rows = s.save_csv(path_raw, use_upsampled=False)
+                    self.log(f'✓ Saved raw: {rows} rows → {path_raw}')
                     saved_files.append(path_raw)
                 except Exception as e:
                     err_msg = f'Sensor {s.name} raw: {e}'
@@ -713,8 +736,8 @@ class App(tk.Tk):
             if s.upsampled_data:
                 try:
                     path_ups = f"{folder}/sensor_{s.name}_upsampled_{int(self.upsample_fs)}Hz_{ts}.csv"
-                    s.save_csv(path_ups, use_upsampled=True)
-                    self.log(f'✓ Saved upsampled: {path_ups}')
+                    rows = s.save_csv(path_ups, use_upsampled=True)
+                    self.log(f'✓ Saved upsampled: {rows} rows → {path_ups}')
                     saved_files.append(path_ups)
                 except Exception as e:
                     err_msg = f'Sensor {s.name} upsampled: {e}'
