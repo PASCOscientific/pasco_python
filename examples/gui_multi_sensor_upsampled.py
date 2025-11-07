@@ -551,8 +551,13 @@ class App(tk.Tk):
         if not self.csv_writer:
             return
 
+        # Check if any sensor has upsampled data
+        sensors_with_data = [s for s in self.sensors if s.connected and s.upsampled_data]
+        if not sensors_with_data:
+            return
+
         # Find common time range
-        min_len = min(len(s.upsampled_data) for s in self.sensors if s.connected and s.upsampled_data)
+        min_len = min(len(s.upsampled_data) for s in sensors_with_data)
         if min_len == 0:
             return
 
