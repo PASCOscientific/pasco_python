@@ -495,6 +495,7 @@ class App(tk.Tk):
         now = time.perf_counter()
         stamp = now - self.t0
 
+        any_new_data = False
         for s in self.sensors:
             if s.connected and s.selected_measurement:
                 try:
@@ -502,8 +503,20 @@ class App(tk.Tk):
                     if isinstance(val, (int, float)):
                         s.add_sample(stamp, val)
                         s.val_var.set(f"{val:.4f}")
+                        any_new_data = True
+                        # Debug: log data collection
+                        if len(s.raw_data) % 10 == 0:  # Log every 10 samples
+                            self.log(f'Sensor {s.name}: {len(s.raw_data)} raw samples')
+
+                        # Trigger upsampling if enough data
+                        if len(s.raw_data) >= 4 and len(s.raw_data) % 5 == 0:
+                            s.upsample_recent(stamp)
+                            # Update stats immediately
+                            raw_len = len(s.raw_data)
+                            ups_len = len(s.upsampled_data)
+                            s.stats_var.set(f'Raw:{raw_len} Up:{ups_len} ~{s.actual_freq_estimate:.1f}Hz')
                 except Exception as e:
-                    pass
+                    self.log(f'Error reading sensor {s.name}: {e}')
 
         # Schedule next tick
         self._tick_after_id = self.after(int(self.base_dt * 1000), self._tick)
@@ -515,12 +528,17 @@ class App(tk.Tk):
 
             for s in self.sensors:
                 if s.connected and len(s.raw_data) >= 4:
+                    prev_ups_len = len(s.upsampled_data)
                     s.upsample_recent(current_time)
+                    new_ups_len = len(s.upsampled_data)
 
                     # Update stats
                     raw_len = len(s.raw_data)
-                    ups_len = len(s.upsampled_data)
-                    s.stats_var.set(f'Raw:{raw_len} Up:{ups_len} ~{s.actual_freq_estimate:.1f}Hz')
+                    s.stats_var.set(f'Raw:{raw_len} Up:{new_ups_len} ~{s.actual_freq_estimate:.1f}Hz')
+
+                    # Debug: log upsampling
+                    if new_ups_len > prev_ups_len and new_ups_len % 50 == 0:
+                        self.log(f'Sensor {s.name}: upsampled to {new_ups_len} points')
 
             # Write upsampled data to CSV periodically
             self._write_upsampled_to_csv()
@@ -556,6 +574,7 @@ class App(tk.Tk):
 
     def _draw_time_plot(self):
         """Vẽ time-domain plot với upsampled data"""
+        has_data = False
         for s in self.sensors:
             line = self.time_lines.get(s.name)
             if not line:
@@ -581,6 +600,7 @@ class App(tk.Tk):
             ys = [v for _, v in vals]
 
             line.set_data(xs, ys)
+            has_data = True
 
         # Auto-scale Y axis
         all_ys = []
@@ -598,7 +618,11 @@ class App(tk.Tk):
             pad = 0.05 * (ymax - ymin)
             self.ax_time.set_ylim(ymin - pad, ymax + pad)
 
-        self.canvas_time.draw()  # Force redraw
+        try:
+            self.canvas_time.draw()  # Force redraw
+            self.canvas_time.flush_events()  # Process events
+        except Exception as e:
+            pass  # Ignore draw errors
 
     def _draw_fft_plot(self):
         """Vẽ FFT plot (sử dụng upsampled data)"""
@@ -642,7 +666,11 @@ class App(tk.Tk):
                 line.set_data([], [])
 
         self.ax_fft.set_xlim(0, max_freq)
-        self.canvas_fft.draw()  # Force redraw
+        try:
+            self.canvas_fft.draw()  # Force redraw
+            self.canvas_fft.flush_events()  # Process events
+        except Exception as e:
+            pass  # Ignore draw errors
 
     def save_all_csv(self):
         """Lưu tất cả sensors ra CSV (cả raw và upsampled)"""
