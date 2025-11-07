@@ -333,6 +333,7 @@ class App(tk.Tk):
         # Time domain plot
         ttk.Label(time_tab, text='Acceleration vs Time (Upsampled Data)').pack(anchor='w', padx=4, pady=(4, 0))
         self.fig_time = Figure(figsize=(6, 5), dpi=100)
+        self.fig_time.tight_layout()
         ax = self.fig_time.add_subplot(1, 1, 1)
         ax.grid(True, alpha=0.3)
         ax.set_xlim(0, self.window_s)
@@ -346,10 +347,12 @@ class App(tk.Tk):
         ax.legend(loc='upper right', fontsize=8, framealpha=0.2)
         self.canvas_time = FigureCanvasTkAgg(self.fig_time, master=time_tab)
         self.canvas_time.get_tk_widget().pack(fill='both', expand=True, padx=4, pady=4)
+        self.canvas_time.draw()  # Initial draw
 
         # FFT plot
         ttk.Label(fft_tab, text='Magnitude Spectrum').pack(anchor='w', padx=4, pady=(4, 0))
         self.fig_fft = Figure(figsize=(6, 5), dpi=100)
+        self.fig_fft.tight_layout()
         axf = self.fig_fft.add_subplot(1, 1, 1)
         axf.grid(True, alpha=0.3)
         axf.set_xlim(0, self.upsample_fs / 2.0)
@@ -364,6 +367,7 @@ class App(tk.Tk):
         axf.legend(loc='upper right', fontsize=8, framealpha=0.2)
         self.canvas_fft = FigureCanvasTkAgg(self.fig_fft, master=fft_tab)
         self.canvas_fft.get_tk_widget().pack(fill='both', expand=True, padx=4, pady=4)
+        self.canvas_fft.draw()  # Initial draw
         self.fft_info = ttk.Label(fft_tab, text='Dominant peaks: -')
         self.fft_info.pack(anchor='w', padx=6, pady=(0, 4))
 
@@ -594,7 +598,7 @@ class App(tk.Tk):
             pad = 0.05 * (ymax - ymin)
             self.ax_time.set_ylim(ymin - pad, ymax + pad)
 
-        self.canvas_time.draw_idle()
+        self.canvas_time.draw()  # Force redraw
 
     def _draw_fft_plot(self):
         """Vẽ FFT plot (sử dụng upsampled data)"""
@@ -638,7 +642,7 @@ class App(tk.Tk):
                 line.set_data([], [])
 
         self.ax_fft.set_xlim(0, max_freq)
-        self.canvas_fft.draw_idle()
+        self.canvas_fft.draw()  # Force redraw
 
     def save_all_csv(self):
         """Lưu tất cả sensors ra CSV (cả raw và upsampled)"""
