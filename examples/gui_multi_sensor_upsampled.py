@@ -162,12 +162,17 @@ class SensorClient:
                 self.upsampled_data.append((t, float(v)))
 
         except Exception as e:
-            # Fallback: nếu upsampling fail, copy raw data
-            pass
+            # Fallback: nếu upsampling fail, log error
+            import traceback
+            print(f"Upsampling error for {self.name}: {e}")
+            print(traceback.format_exc())
 
     def save_csv(self, path, use_upsampled=True):
         """Lưu CSV - có thể chọn raw hoặc upsampled data"""
         data_to_save = self.upsampled_data if use_upsampled else self.raw_data
+
+        if not data_to_save:
+            raise ValueError(f"No {'upsampled' if use_upsampled else 'raw'} data to save")
 
         with open(path, 'w', newline='', encoding='utf-8') as f:
             w = csv.writer(f)
@@ -684,24 +689,52 @@ class App(tk.Tk):
             return
 
         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        saved_files = []
+        errors = []
 
         for s in self.sensors:
             if not s.raw_data and not s.upsampled_data:
+                self.log(f'Sensor {s.name}: No data to save')
                 continue
 
             # Save raw
             if s.raw_data:
-                path_raw = f"{folder}/sensor_{s.name}_raw_{ts}.csv"
-                s.save_csv(path_raw, use_upsampled=False)
-                self.log(f'Saved raw: {path_raw}')
+                try:
+                    path_raw = f"{folder}/sensor_{s.name}_raw_{ts}.csv"
+                    s.save_csv(path_raw, use_upsampled=False)
+                    self.log(f'✓ Saved raw: {path_raw}')
+                    saved_files.append(path_raw)
+                except Exception as e:
+                    err_msg = f'Sensor {s.name} raw: {e}'
+                    self.log(f'✗ Error: {err_msg}')
+                    errors.append(err_msg)
 
             # Save upsampled
             if s.upsampled_data:
-                path_ups = f"{folder}/sensor_{s.name}_upsampled_{int(self.upsample_fs)}Hz_{ts}.csv"
-                s.save_csv(path_ups, use_upsampled=True)
-                self.log(f'Saved upsampled: {path_ups}')
+                try:
+                    path_ups = f"{folder}/sensor_{s.name}_upsampled_{int(self.upsample_fs)}Hz_{ts}.csv"
+                    s.save_csv(path_ups, use_upsampled=True)
+                    self.log(f'✓ Saved upsampled: {path_ups}')
+                    saved_files.append(path_ups)
+                except Exception as e:
+                    err_msg = f'Sensor {s.name} upsampled: {e}'
+                    self.log(f'✗ Error: {err_msg}')
+                    errors.append(err_msg)
 
-        messagebox.showinfo('Save CSV', f'Saved all data to {folder}')
+        # Show summary
+        if saved_files and not errors:
+            messagebox.showinfo('Save CSV', f'✓ Saved {len(saved_files)} files to:\n{folder}')
+        elif saved_files and errors:
+            messagebox.showwarning('Save CSV',
+                f'Saved {len(saved_files)} files\n'
+                f'Errors: {len(errors)}\n\n'
+                f'Check log for details')
+        elif errors:
+            messagebox.showerror('Save CSV',
+                f'Failed to save files!\n\n'
+                f'Errors:\n' + '\n'.join(errors[:3]))
+        else:
+            messagebox.showwarning('Save CSV', 'No data to save from any sensor')
 
 
 if __name__ == '__main__':
