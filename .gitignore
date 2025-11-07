@@ -58,3 +58,8 @@ venv-*/
 .venv/
 env/
 ENV/
+
+# Data output directories
+data_output/
+upsampling_results/
+*.csv
