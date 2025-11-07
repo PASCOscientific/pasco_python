@@ -51,3 +51,10 @@ Thumbs.db
 
 # Pypi package files
 src/pasco.egg-info/
+
+# Virtual environments
+venv/
+venv-*/
+.venv/
+env/
+ENV/
