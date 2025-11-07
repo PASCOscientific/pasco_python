@@ -170,16 +170,28 @@ class SensorClient:
     def save_csv(self, path, use_upsampled=True):
         """Lưu CSV - có thể chọn raw hoặc upsampled data"""
         data_to_save = self.upsampled_data if use_upsampled else self.raw_data
+        mode = 'upsampled' if use_upsampled else 'raw'
+
+        print(f"\n[DEBUG] save_csv for sensor {self.name}:")
+        print(f"  Mode: {mode}")
+        print(f"  Buffer length: {len(data_to_save)}")
+        print(f"  Buffer type: {type(data_to_save)}")
+        print(f"  Connected: {self.connected}")
+        print(f"  Selected measurement: {self.selected_measurement}")
 
         if not data_to_save:
-            raise ValueError(f"No {'upsampled' if use_upsampled else 'raw'} data to save")
+            raise ValueError(f"No {mode} data to save for sensor {self.name}")
 
         # Convert deque to list for iteration
         data_list = list(data_to_save)
+        print(f"  Converted to list: {len(data_list)} items")
+
+        if len(data_list) > 0:
+            print(f"  First item: {data_list[0]}")
+            print(f"  Last item: {data_list[-1]}")
 
         with open(path, 'w', newline='', encoding='utf-8') as f:
             w = csv.writer(f)
-            mode = 'upsampled' if use_upsampled else 'raw'
             w.writerow(['time_s', self.selected_measurement or 'value', f'mode={mode}'])
 
             rows_written = 0
@@ -187,7 +199,7 @@ class SensorClient:
                 w.writerow([f"{t:.6f}", f"{float(v):.4f}"])
                 rows_written += 1
 
-        print(f"Saved {rows_written} rows to {path}")  # Debug
+        print(f"  ✓ Wrote {rows_written} rows to {path}\n")
         return rows_written
 
 
@@ -311,6 +323,14 @@ class App(tk.Tk):
             s.meas_var = tk.StringVar()
             s.meas_cb = ttk.Combobox(fr, textvariable=s.meas_var, width=24, state='readonly', values=[])
             s.meas_cb.grid(row=1, column=1, columnspan=3, sticky='we', padx=4)
+
+            # Callback to update selected_measurement when user changes combobox
+            def _on_meas_change(event, sensor=s):
+                selected = sensor.meas_var.get()
+                if selected:
+                    sensor.selected_measurement = selected
+                    self.log(f'Sensor {sensor.name}: measurement changed to {selected}')
+            s.meas_cb.bind('<<ComboboxSelected>>', _on_meas_change)
 
             ttk.Label(fr, text='Value:').grid(row=2, column=0, sticky='w')
             s.val_var = tk.StringVar(value='-')
@@ -464,6 +484,16 @@ class App(tk.Tk):
             messagebox.showwarning('Start Recording', 'No sensors connected!')
             return
 
+        # Verify sensor configuration
+        for s in self.sensors:
+            if s.connected:
+                self.log(f'Sensor {s.name} config:')
+                self.log(f'  - ID: {s.id_var.get()}')
+                self.log(f'  - Measurement: {s.selected_measurement}')
+                self.log(f'  - Unit: {s.unit}')
+                if not s.selected_measurement:
+                    self.log(f'  ⚠ WARNING: No measurement selected!')
+
         self.recording = True
         self.t0 = None
         self.log(f'Recording started (target {self.upsample_fs}Hz upsampled)')
@@ -532,19 +562,41 @@ class App(tk.Tk):
                         s.add_sample(stamp, val)
                         s.val_var.set(f"{val:.4f}")
                         any_new_data = True
+
+                        # Debug: log first sample
+                        if len(s.raw_data) == 1:
+                            self.log(f'Sensor {s.name}: First sample received! Value={val:.4f}')
+
                         # Debug: log data collection
                         if len(s.raw_data) % 10 == 0:  # Log every 10 samples
-                            self.log(f'Sensor {s.name}: {len(s.raw_data)} raw samples')
+                            self.log(f'Sensor {s.name}: {len(s.raw_data)} raw samples (latest={val:.4f})')
 
                         # Trigger upsampling if enough data
                         if len(s.raw_data) >= 4 and len(s.raw_data) % 5 == 0:
+                            prev_ups = len(s.upsampled_data)
                             s.upsample_recent(stamp)
+                            new_ups = len(s.upsampled_data)
+
+                            # Log upsampling activity
+                            if new_ups > prev_ups and new_ups <= 50:  # Log early upsampling
+                                self.log(f'Sensor {s.name}: Upsampled! {prev_ups} → {new_ups} points')
+
                             # Update stats immediately
                             raw_len = len(s.raw_data)
-                            ups_len = len(s.upsampled_data)
-                            s.stats_var.set(f'Raw:{raw_len} Up:{ups_len} ~{s.actual_freq_estimate:.1f}Hz')
+                            s.stats_var.set(f'Raw:{raw_len} Up:{new_ups} ~{s.actual_freq_estimate:.1f}Hz')
+                    else:
+                        # Log if read_once() returns non-numeric value
+                        if len(s.raw_data) == 0:  # Only log once at start
+                            self.log(f'Sensor {s.name}: read_once() returned {type(val).__name__}: {val}')
                 except Exception as e:
                     self.log(f'Error reading sensor {s.name}: {e}')
+                    import traceback
+                    traceback.print_exc()
+            elif s.connected and not s.selected_measurement:
+                # Sensor connected but no measurement selected
+                if not hasattr(s, '_logged_no_meas'):
+                    self.log(f'WARNING: Sensor {s.name} connected but no measurement selected!')
+                    s._logged_no_meas = True
 
         # Schedule next tick
         self._tick_after_id = self.after(int(self.base_dt * 1000), self._tick)
