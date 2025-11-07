@@ -63,3 +63,7 @@ ENV/
 data_output/
 upsampling_results/
 *.csv
+
+# Simulation outputs
+simulation_result.png
+*.png
