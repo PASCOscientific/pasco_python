@@ -77,6 +77,11 @@ class SensorClient:
         self.actual_sample_count = 0
         self.actual_freq_estimate = 0.0
 
+        # Auto-save raw data
+        self.raw_csv_file = None
+        self.raw_csv_writer = None
+        self.raw_csv_path = None
+
     def connect_by_id(self, sensor_id: str):
         self.dev.connect_by_id(sensor_id)
         self.connected = True
@@ -100,9 +105,47 @@ class SensorClient:
         return self.dev.read_data(self.selected_measurement)
 
     def add_sample(self, timestamp, value):
-        """Thêm sample vào raw buffer"""
+        """Thêm sample vào raw buffer và tự động ghi vào CSV"""
         self.raw_data.append((timestamp, value))
         self.actual_sample_count += 1
+
+        # Auto-save raw data
+        if self.raw_csv_writer:
+            try:
+                self.raw_csv_writer.writerow([f"{timestamp:.6f}", f"{float(value):.4f}"])
+                # Flush mỗi 10 samples để tối ưu performance
+                if self.actual_sample_count % 10 == 0:
+                    self.raw_csv_file.flush()
+            except Exception as e:
+                print(f"[RAW AUTO-SAVE ERROR] Sensor {self.name}: {e}")
+
+    def open_raw_csv(self, csv_dir, timestamp_str):
+        """Mở file CSV để auto-save raw data"""
+        try:
+            self.raw_csv_path = os.path.join(csv_dir, f'sensor_{self.name}_raw_{timestamp_str}.csv')
+            self.raw_csv_file = open(self.raw_csv_path, 'w', newline='', encoding='utf-8')
+            self.raw_csv_writer = csv.writer(self.raw_csv_file)
+            self.raw_csv_writer.writerow(['time_s', self.selected_measurement or 'value', 'mode=raw'])
+            print(f"[RAW AUTO-SAVE] Opened: {self.raw_csv_path}")
+            return True
+        except Exception as e:
+            print(f"[RAW AUTO-SAVE ERROR] Cannot open file for {self.name}: {e}")
+            return False
+
+    def close_raw_csv(self):
+        """Đóng file CSV raw"""
+        if self.raw_csv_file:
+            try:
+                self.raw_csv_file.flush()
+                self.raw_csv_file.close()
+                print(f"[RAW AUTO-SAVE] Closed: {self.raw_csv_path}")
+                return self.raw_csv_path
+            except Exception as e:
+                print(f"[RAW AUTO-SAVE ERROR] Cannot close file for {self.name}: {e}")
+            finally:
+                self.raw_csv_file = None
+                self.raw_csv_writer = None
+        return None
 
     def upsample_recent(self, current_time):
         """
@@ -504,16 +547,30 @@ class App(tk.Tk):
         self.t0 = None
         self.log(f'Recording started (target {self.upsample_fs}Hz upsampled)')
         self.log(f'Connected sensors: {", ".join(connected_sensors)}')
-        self.log('Auto-save: Enabled (will save to CSV every 200ms)')
+        self.log('Auto-save: Enabled')
+        self.log('  - Raw data: Saved instantly on each sample')
+        self.log('  - Upsampled data: Saved every 200ms')
+
+        # Generate timestamp for filenames
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+        # Open CSV for auto-logging raw data (one file per sensor)
+        raw_files_opened = []
+        for s in self.sensors:
+            if s.connected and s.selected_measurement:
+                if s.open_raw_csv(self.csv_dir, ts):
+                    raw_files_opened.append(s.name)
+
+        if raw_files_opened:
+            self.log(f'Raw CSV opened for sensors: {", ".join(raw_files_opened)}')
 
         # Open CSV for auto-logging (upsampled data)
         try:
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
             self.csv_path = os.path.join(self.csv_dir, f'recording_{ts}_upsampled_{int(self.upsample_fs)}Hz.csv')
             self.csv_file = open(self.csv_path, 'w', newline='', encoding='utf-8')
             self.csv_writer = csv.writer(self.csv_file)
             self.csv_writer.writerow(['time_s', 'A', 'B', 'C'])
-            self.log(f'Auto CSV: {self.csv_path}')
+            self.log(f'Upsampled CSV: {os.path.basename(self.csv_path)}')
         except Exception as e:
             self.log(f'CSV open failed: {e}')
             self.csv_file = None
@@ -538,7 +595,19 @@ class App(tk.Tk):
                 ups_count = len(s.upsampled_data)
                 self.log(f'  Sensor {s.name}: {raw_count} raw, {ups_count} upsampled samples')
 
-        # Close CSV
+        # Close raw CSV files
+        raw_files_closed = []
+        for s in self.sensors:
+            path = s.close_raw_csv()
+            if path:
+                raw_files_closed.append(f'{s.name}: {os.path.basename(path)}')
+
+        if raw_files_closed:
+            self.log('✓ Raw data auto-saved:')
+            for info in raw_files_closed:
+                self.log(f'  - {info}')
+
+        # Close upsampled CSV
         if self.csv_file:
             # Write any remaining data
             self._write_upsampled_to_csv()
@@ -547,8 +616,8 @@ class App(tk.Tk):
                 self.csv_file.flush()
                 self.csv_file.close()
                 if self.csv_path:
-                    self.log(f'✓ Auto-saved to: {os.path.basename(self.csv_path)}')
-                    print(f"\n[AUTO-SAVE] File closed: {self.csv_path}")
+                    self.log(f'✓ Upsampled data auto-saved: {os.path.basename(self.csv_path)}')
+                    print(f"\n[AUTO-SAVE] Upsampled file closed: {self.csv_path}")
             except Exception as e:
                 self.log(f'✗ Error closing CSV: {e}')
             finally:
