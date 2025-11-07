@@ -1064,11 +1064,15 @@ class PASCOBLEDevice():
                         byte_value = self._twos_comp(byte_value, raw_m['DataSize'])
                         result_value = float(self._binary_fraction(byte_value))
                     
-                    result_value = round(result_value, raw_m['Precision']) if 'Precision' in raw_m else result_value
+                    # Disabled rounding to preserve full precision for data analysis
+                    # result_value = round(result_value, raw_m['Precision']) if 'Precision' in raw_m else result_value
+                    pass  # Keep full floating-point precision
 
                 elif raw_m['Type'] == 'Constant':
                     result_value = float(raw_m['Value'])
-                    result_value = round(result_value, raw_m['Precision']) if 'Precision' in raw_m else result_value
+                    # Disabled rounding to preserve full precision for data analysis
+                    # result_value = round(result_value, raw_m['Precision']) if 'Precision' in raw_m else result_value
+                    pass  # Keep full floating-point precision
 
                 val = {raw_m['ID']: result_value}
                 self._sensor_data[sensor_id].update(val)
@@ -1079,8 +1083,9 @@ class PASCOBLEDevice():
             for m_id, m in self._device_measurements[sensor_id].items():
                 if self._sensor_data[sensor_id][m_id] == None:
                     result_value = self._get_measurement_value(sensor_id, m_id)
-                    if 'Precision' in m and result_value != None:
-                        result_value = round(result_value, m['Precision'])
+                    # Disabled rounding to preserve full precision for data analysis
+                    # if 'Precision' in m and result_value != None:
+                    #     result_value = round(result_value, m['Precision'])
 
                     if 'Limits' in m and result_value != None:
                         limits = [int(lim) for lim in m['Limits'].split(',')]
