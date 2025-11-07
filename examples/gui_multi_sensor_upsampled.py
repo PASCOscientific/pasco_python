@@ -242,6 +242,9 @@ class App(tk.Tk):
         self.csv_dir = os.path.join(os.getcwd(), 'recordings_upsampled')
         os.makedirs(self.csv_dir, exist_ok=True)
 
+        # Track last written index for auto-save
+        self.last_written_index = {}
+
         # Build UI
         self._build_modern_ui()
 
@@ -478,6 +481,9 @@ class App(tk.Tk):
             s.upsampled_data.clear()
             s.actual_sample_count = 0
 
+        # Reset last written index for auto-save
+        self.last_written_index = {s.name: 0 for s in self.sensors}
+
         # Check which sensors are connected
         connected_sensors = [s.name for s in self.sensors if s.connected]
         if not connected_sensors:
@@ -498,6 +504,7 @@ class App(tk.Tk):
         self.t0 = None
         self.log(f'Recording started (target {self.upsample_fs}Hz upsampled)')
         self.log(f'Connected sensors: {", ".join(connected_sensors)}')
+        self.log('Auto-save: Enabled (will save to CSV every 200ms)')
 
         # Open CSV for auto-logging (upsampled data)
         try:
@@ -533,14 +540,21 @@ class App(tk.Tk):
 
         # Close CSV
         if self.csv_file:
+            # Write any remaining data
+            self._write_upsampled_to_csv()
+
             try:
                 self.csv_file.flush()
                 self.csv_file.close()
-            except Exception:
-                pass
+                if self.csv_path:
+                    self.log(f'✓ Auto-saved to: {os.path.basename(self.csv_path)}')
+                    print(f"\n[AUTO-SAVE] File closed: {self.csv_path}")
+            except Exception as e:
+                self.log(f'✗ Error closing CSV: {e}')
             finally:
                 self.csv_file = None
                 self.csv_writer = None
+                self.csv_path = None
 
     def _tick(self):
         """Thu thập dữ liệu thô từ sensors"""
@@ -627,24 +641,73 @@ class App(tk.Tk):
         self.after(self.upsample_interval_ms, self._upsample_all)
 
     def _write_upsampled_to_csv(self):
-        """Ghi dữ liệu upsampled vào CSV"""
-        if not self.csv_writer:
+        """Ghi dữ liệu upsampled vào CSV tự động"""
+        if not self.csv_writer or not self.csv_file:
             return
 
-        # Check if any sensor has upsampled data
-        sensors_with_data = [s for s in self.sensors if s.connected and s.upsampled_data]
-        if not sensors_with_data:
-            return
+        try:
+            rows_written = 0
 
-        # Find common time range
-        min_len = min(len(s.upsampled_data) for s in sensors_with_data)
-        if min_len == 0:
-            return
+            # Tìm tất cả timestamps có trong upsampled_data của tất cả sensors
+            all_timestamps = set()
+            for s in self.sensors:
+                if s.connected and s.upsampled_data:
+                    # Chỉ lấy timestamps từ last_written_index trở đi
+                    last_idx = self.last_written_index.get(s.name, 0)
+                    data_list = list(s.upsampled_data)
+                    for i in range(last_idx, len(data_list)):
+                        t, v = data_list[i]
+                        all_timestamps.add(t)
 
-        # Write new rows
-        # (Simple approach: write last N rows that haven't been written)
-        # For production, you'd track last written index
-        pass  # CSV writing can be optimized based on requirements
+            if not all_timestamps:
+                return
+
+            # Sort timestamps
+            sorted_timestamps = sorted(all_timestamps)
+
+            # Ghi từng row
+            for t in sorted_timestamps:
+                row_values = [f"{t:.6f}"]  # time column
+
+                # Tìm giá trị gần nhất cho mỗi sensor tại timestamp này
+                for s in self.sensors:
+                    if s.connected and s.upsampled_data:
+                        # Tìm giá trị tại hoặc gần timestamp t
+                        data_list = list(s.upsampled_data)
+                        closest_val = None
+                        min_diff = float('inf')
+
+                        for dt, dv in data_list:
+                            diff = abs(dt - t)
+                            if diff < min_diff:
+                                min_diff = diff
+                                closest_val = dv
+
+                        if closest_val is not None and min_diff < 0.1:  # Trong vòng 0.1s
+                            row_values.append(f"{float(closest_val):.4f}")
+                        else:
+                            row_values.append('')  # Empty nếu không có data
+                    else:
+                        row_values.append('')  # Empty nếu sensor không connected
+
+                # Ghi row
+                self.csv_writer.writerow(row_values)
+                rows_written += 1
+
+            # Update last_written_index cho mỗi sensor
+            for s in self.sensors:
+                if s.connected and s.upsampled_data:
+                    self.last_written_index[s.name] = len(s.upsampled_data)
+
+            # Flush để đảm bảo data được ghi xuống disk
+            if rows_written > 0:
+                self.csv_file.flush()
+                print(f"[AUTO-SAVE] Wrote {rows_written} rows to CSV")
+
+        except Exception as e:
+            print(f"[AUTO-SAVE ERROR] {e}")
+            import traceback
+            traceback.print_exc()
 
     def _refresh_plots(self):
         """Refresh plots định kỳ"""
