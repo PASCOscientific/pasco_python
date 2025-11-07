@@ -109,6 +109,16 @@ class SensorClient:
         self.raw_data.append((timestamp, value))
         self.actual_sample_count += 1
 
+        # Debug: Print first few values to check precision
+        if self.actual_sample_count <= 3:
+            print(f"[DEBUG] Sensor {self.name} sample #{self.actual_sample_count}:")
+            print(f"  Raw value type: {type(value)}")
+            print(f"  Raw value: {value}")
+            print(f"  Raw value repr: {repr(value)}")
+            print(f"  Formatted .1f: {float(value):.1f}")
+            print(f"  Formatted .4f: {float(value):.4f}")
+            print(f"  Formatted .6f: {float(value):.6f}")
+
         # Auto-save raw data
         if self.raw_csv_writer:
             try:
