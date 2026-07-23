@@ -1,6 +1,5 @@
 import asyncio
 import math
-import nest_asyncio
 import os
 import sys
 import re
@@ -18,8 +17,6 @@ class PASCOBLEDevice():
     """
     PASCO Device object that has functions for connecting and getting data
     """
-    
-    nest_asyncio.apply() # Fixes a glitch where some IDEs block asyncio from running
 
     SENSOR_SERVICE_ID = 0
 

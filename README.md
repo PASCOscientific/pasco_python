@@ -1,6 +1,3 @@
-[![Python](https://img.shields.io/badge/python-3.11-blue)](https://pypi.org/project/pasco/)
-
-![Platform](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-lightgrey)
 
 # README
 
@@ -19,7 +16,7 @@ For project examples, view our [pasco_python_examples repository](https://github
 
 # How do I get started?
 
-First, make sure you are working with Python 3.11 (see [Troubleshooting](#troubleshooting) for Python version help)
+First, make sure you are working with Python 3.14 (see [Troubleshooting](#troubleshooting) for Python version help)
 
 To install the PASCO package into your Python environment, type this into your Terminal
 
@@ -482,7 +479,7 @@ More examples of steppers, servos, plugin sensors, and the power output board ar
 ---
 # Troubleshooting
 
-### 1. Are you working with Python 3.11?
+### 1. Are you working with Python 3.14?
 To check your version type in your terminal
 ```
 python --version
@@ -493,7 +490,7 @@ python3 --version
 ```
 If that doesn't work you don't have python installed. Go to https://www.python.org/ and install.
 
-If you have an older version of python installed, uninstall it and reinstall 3.11. 
+If you have an older version of python installed, uninstall it and reinstall 3.14. 
 After you reinstall Python you will also need to reinstall the pasco package. 
 ### 2. Is pasco installed?
 If you get an error like `no module named "<module name>"` try

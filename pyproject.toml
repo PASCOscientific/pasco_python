@@ -1,23 +1,22 @@
 [build-system]
-requires = ["setuptools>=61.2", "bleak", "nest_asyncio"]
+requires = ["setuptools>=61.2", "bleak"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pasco"
-version = "0.3.65"
+version = "0.3.66"
 authors = [{name = "Waqas Saeed"}]
 description = "PASCO Python API for Wireless Sensors"
 classifiers = [
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.14",
     "License :: Other/Proprietary License",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
     "Operating System :: Unix",
 ]
-requires-python = "==3.11"
+requires-python = ">=3.14"
 dependencies = [
-    "bleak==0.20.2",
-    "nest_asyncio==1.5.6",
+    "bleak==3.0.2",
 ]
 
 [project.readme]
